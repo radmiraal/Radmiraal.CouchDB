@@ -2,8 +2,16 @@
 	"name": "radmiraal/couchdb",
 	"type": "typo3-flow-package",
 	"description": "",
+	"license": ["LGPL-3.0+"],
+	"repository": [
+		{
+			"type": "git",
+			"url": "git://github.com/radmiraal/TYPO3.CouchDB.git"
+		}
+	],
 	"require": {
-		"typo3/flow": "*"
+		"typo3/flow": "*",
+		"typo3/couchdb": "*"
 	},
 	"autoload": {
 		"psr-0": {
