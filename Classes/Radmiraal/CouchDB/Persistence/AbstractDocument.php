@@ -123,6 +123,28 @@ abstract class AbstractDocument {
 		return json_encode((object)$values);
 	}
 
+	/**
+	 * Magic get* / set* method
+	 *
+	 * @param string $method
+	 * @param array $arguments
+	 * @return mixed
+	 */
+	function __call($method, array $arguments) {
+		if (strlen($method) <= 3) {
+			return NULL;
+		}
+
+		$methodName = '__' . substr($method, 0, 3);
+
+		if ($methodName !== '__set' && $methodName !== '__get') {
+			return NULL;
+		}
+
+		$var = lcfirst(substr($method, 3));
+		return call_user_func_array(array($this, $methodName), array_merge(array($var), $arguments));
+	}
+
 }
 
 ?>
