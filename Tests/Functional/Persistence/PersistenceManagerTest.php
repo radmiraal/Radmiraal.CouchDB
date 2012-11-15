@@ -148,6 +148,34 @@ class PersistenceManagerTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
 		$this->assertNull($matchObject);
 	}
 
+	/**
+	 * @test
+	 */
+	public function anObjectCanBeUpdatedAndRetreivedCorrectly() {
+		$this->persistenceManager->add(
+			new \Radmiraal\CouchDB\Document(array(
+				'_id' => 'object-to-be-updated',
+				'title' => 'Some title'
+			))
+		);
+
+		$this->persistenceManager->persistAll();
+		$this->persistenceManager->clearState();
+
+		$matchObject = $this->persistenceManager->getObjectByIdentifier('object-to-be-updated');
+
+		$this->assertEquals('Some title', $matchObject->getTitle('foo', 'bar'));
+
+		$matchObject->setTitle('Some other title');
+		$this->persistenceManager->update($matchObject);
+
+		$this->persistenceManager->persistAll();
+		$this->persistenceManager->clearState();
+
+		$secondMatchObject = $this->persistenceManager->getObjectByIdentifier('object-to-be-updated');
+		$this->assertEquals('Some other title', $secondMatchObject->getTitle());
+	}
+
 }
 
 ?>

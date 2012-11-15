@@ -80,6 +80,9 @@ class PersistenceManager extends \TYPO3\Flow\Persistence\AbstractPersistenceMana
 	 */
 	public function update($object) {
 		$this->validate($object);
+		if (!$this->changedObjects->contains($object) && $object->getDocumentId() !== NULL) {
+			$this->changedObjects->attach($object);
+		}
 	}
 
 	/**
@@ -198,7 +201,8 @@ class PersistenceManager extends \TYPO3\Flow\Persistence\AbstractPersistenceMana
 		}
 
 		foreach ($this->changedObjects as $changedObject) {
-			// TODO: add update code
+			$this->client->updateDocument((string)$changedObject, $changedObject->getDocumentId());
+			$this->changedObjects->detach($changedObject);
 		}
 
 		foreach ($this->addedObjects as $addedObject) {
