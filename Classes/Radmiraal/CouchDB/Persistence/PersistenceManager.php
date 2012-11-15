@@ -104,6 +104,9 @@ class PersistenceManager extends \TYPO3\Flow\Persistence\AbstractPersistenceMana
 	 */
 	public function remove($object) {
 		$this->validate($object);
+		if (!$this->removedObjects->contains($object) && $object->getDocumentId() !== NULL) {
+			$this->removedObjects->attach($object);
+		}
 	}
 
 	/**
@@ -127,7 +130,12 @@ class PersistenceManager extends \TYPO3\Flow\Persistence\AbstractPersistenceMana
 	 * @return \Radmiraal\CouchDB\Persistence\AbstractDocument
 	 */
 	public function getObjectByIdentifier($identifier, $objectType = NULL, $useLazyLoading = FALSE) {
-		$document = $this->client->getDocument($identifier);
+		try {
+			$document = $this->client->getDocument($identifier);
+		} catch (\TYPO3\CouchDB\Client\NotFoundException $exception) {
+			return NULL;
+		}
+
 		if (isset($document->persistence_objectType)) {
 			return new $document->persistence_objectType((array)$document);
 		}
@@ -185,7 +193,8 @@ class PersistenceManager extends \TYPO3\Flow\Persistence\AbstractPersistenceMana
 	 */
 	public function persistAll() {
 		foreach ($this->removedObjects as $removedObject) {
-			// TODO: add removal code
+			$this->client->deleteDocument($removedObject->getDocumentId(), $removedObject->getDocumentRevision());
+			$this->removedObjects->detach($removedObject);
 		}
 
 		foreach ($this->changedObjects as $changedObject) {

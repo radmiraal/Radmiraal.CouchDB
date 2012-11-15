@@ -125,6 +125,29 @@ class PersistenceManagerTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
 		$this->assertEquals($testObject->baz, $matchObject->baz);
 	}
 
+	/**
+	 * @test
+	 */
+	public function anObjectCanBeRemovedFromTheDatabase() {
+		$testObject = new \Radmiraal\CouchDB\Document(array('_id' => 'object-to-be-removed'));
+		$this->persistenceManager->add($testObject);
+
+		$this->persistenceManager->persistAll();
+		$this->persistenceManager->clearState();
+
+		$matchObject = $this->persistenceManager->getObjectByIdentifier('object-to-be-removed');
+
+		$this->assertEquals('Radmiraal\\CouchDB\\Document', $matchObject->getDocumentType());
+
+		$this->persistenceManager->remove($matchObject);
+		$this->persistenceManager->persistAll();
+		$this->persistenceManager->clearState();
+
+		$matchObject = $this->persistenceManager->getObjectByIdentifier('object-to-be-removed');
+
+		$this->assertNull($matchObject);
+	}
+
 }
 
 ?>
