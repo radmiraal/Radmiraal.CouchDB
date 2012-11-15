@@ -1,0 +1,7 @@
+Radmiraal:
+  CouchDB:
+    persistence:
+      backendOptions:
+        databaseName: 'radmiraal-couchdb-test'
+        options:
+          timeout: 0

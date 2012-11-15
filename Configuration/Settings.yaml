@@ -1,0 +1,7 @@
+Radmiraal:
+  CouchDB:
+    persistence:
+      backendOptions:
+        databaseName: ''
+        dataSourceName: 'http://127.0.0.1:5984'
+        options: []
