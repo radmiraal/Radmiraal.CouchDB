@@ -43,7 +43,6 @@ abstract class AbstractDocument {
 
 	/**
 	 * @param array $data
-	 * @return void
 	 */
 	public function __construct(array $data = NULL) {
 		if (!isset($data['persistence_objectType'])) {
