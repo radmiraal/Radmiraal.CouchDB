@@ -11,7 +11,8 @@
 	],
 	"require": {
 		"typo3/flow": "*",
-		"typo3/couchdb": "*"
+		"typo3/couchdb": "*",
+		"doctrine/couchdb-odm": "dev-master"
 	},
 	"autoload": {
 		"psr-0": {

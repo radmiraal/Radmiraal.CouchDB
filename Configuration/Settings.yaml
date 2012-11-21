@@ -5,3 +5,9 @@ Radmiraal:
         databaseName: ''
         dataSourceName: 'http://127.0.0.1:5984'
         options: []
+TYPO3:
+  Flow:
+    object:
+      excludeClasses:
+        'Doctrine.CouchDB' : ['.*']
+        'doctrine.couchdbodm' : ['.*']
