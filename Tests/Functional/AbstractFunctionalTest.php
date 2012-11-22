@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
+namespace Radmiraal\CouchDB\Tests\Functional;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -22,58 +22,59 @@ namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
  *                                                                        */
 
 /**
- *
+ * Abstract functional test class, setting up a DocumentManager and httpClient
+ * object for usage in functional tests.
  */
-class BasicPersistenceTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
+abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
+
+	/**
+	 * @var \Doctrine\CouchDB\HTTP\SocketClient
+	 */
+	protected $httpClient;
+
+	/**
+	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected $documentManager;
 
 	/**
 	 * @var string
 	 */
-	protected $dataSourceName = 'http://127.0.0.1:5984';
+	protected $databaseName = 'doctrine_sandbox';
 
 	/**
-	 * @var string
+	 * @var array
 	 */
-	protected $databaseName = 'radmiraal-couchdb-test';
+	protected $settings;
 
 	/**
-	 * @var \TYPO3\CouchDB\Client
+	 * Set up test
 	 */
-	protected $client;
-
 	public function setUp() {
 		parent::setUp();
 
-		$this->client = new \TYPO3\CouchDB\Client($this->dataSourceName);
-		$this->client->setDatabaseName($this->databaseName);
+		$configurationManager = $this->objectManager->get('TYPO3\Flow\Configuration\ConfigurationManager');
+		$this->settings = $this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB', 'persistence', 'backendOptions'));
 
-		if (!$this->client->databaseExists($this->databaseName)) {
-			$this->client->createDatabase($this->databaseName);
-		}
-	}
+		$this->httpClient = new \Doctrine\CouchDB\HTTP\SocketClient(
+			$this->settings['host'],
+			$this->settings['port'],
+			$this->settings['username'],
+			$this->settings['password'],
+			$this->settings['ip']
+		);
 
-	public function tearDown() {
-		if ($this->client->databaseExists($this->databaseName)) {
-			$this->client->deleteDatabase($this->databaseName);
-		}
+		$this->httpClient->request('PUT', '/' . $this->settings['databaseName']);
+
+		$documentManagerFactory = new \Radmiraal\CouchDB\Persistence\DocumentManagerFactory($this->settings);
+		$this->documentManager = $documentManagerFactory->create();
 	}
 
 	/**
-	 * @test
+	 * Clean up database after running tests
 	 */
-	public function aDocumentCanBePersistedAndRetrieved() {
-		$testObject = (object)array(
-			'foo' => 'bar',
-			'baz' => array('test')
-		);
-
-		$result = $this->client->createDocument($testObject);
-		$this->assertTrue($result->isSuccess());
-
-		$matchValue = $this->client->getDocument($result->getId());
-
-		$this->assertEquals($testObject->foo, $matchValue->foo);
-		$this->assertEquals($testObject->baz, $matchValue->baz);
+	public function tearDown() {
+		$this->httpClient->request('DELETE', '/' . $this->settings['databaseName']);
 	}
 
 }

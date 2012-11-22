@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB;
+namespace Radmiraal\CouchDB\Tests\Functional;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,21 +21,32 @@ namespace Radmiraal\CouchDB;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Package\Package as BasePackage;
-
 /**
  *
  */
-class Package extends BasePackage {
+class DocumentManagerTest extends AbstractFunctionalTest {
 
 	/**
-	 * @param \TYPO3\Flow\Core\Bootstrap $bootstrap The current bootstrap
-	 * @return void
+	 * @test
 	 */
-	public function boot(\TYPO3\Flow\Core\Bootstrap $bootstrap) {
-		$dispatcher = $bootstrap->getSignalSlotDispatcher();
-		$dispatcher->connect('TYPO3\Flow\Mvc\Dispatcher', 'afterControllerInvocation', 'Radmiraal\CouchDB\Persistence\PersistenceManager', 'persistAll');
-		$dispatcher->connect('TYPO3\Flow\Cli\SlaveRequestHandler', 'dispatchedCommandLineSlaveRequest', 'Radmiraal\CouchDB\Persistence\PersistenceManager', 'persistAll');
+	public function checkIfHttpClientIsInstantiated() {
+		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->httpClient);
+	}
+
+	/**
+	 * @test
+	 */
+	public function checkIfDatabaseIsCreated() {
+		$res = $this->httpClient->request('GET', '/' . $this->settings['databaseName']);
+		$this->assertEquals(200, $res->status);
+	}
+
+	/**
+	 * @test
+	 */
+	public function doctrineOdmAnnotationsCanBeLoaded() {
+		$annotation = new \Doctrine\ODM\CouchDB\Mapping\Annotations\Document();
+		$this->assertInstanceOf('Doctrine\ODM\CouchDB\Mapping\Annotations\Document', $annotation);
 	}
 
 }

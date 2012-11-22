@@ -3,8 +3,11 @@ Radmiraal:
     persistence:
       backendOptions:
         databaseName: ''
-        dataSourceName: 'http://127.0.0.1:5984'
-        options: []
+        host: 'localhost'
+        port: 5984
+        username: ''
+        password: ''
+        ip: '127.0.0.1'
 TYPO3:
   Flow:
     object:

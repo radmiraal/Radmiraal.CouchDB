@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB;
+namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,10 +21,32 @@ namespace Radmiraal\CouchDB;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
+use Doctrine\ODM\CouchDB\Mapping\Annotations as ODM;
+
 /**
- *
+ * @ODM\EmbeddedDocument
+ * @ODM\Document
  */
-class Document extends Persistence\AbstractDocument {
+class Tag {
+
+	/**
+	 * @var string
+	 */
+	protected $name;
+
+	/**
+	 * @param string $name
+	 */
+	public function __construct($name) {
+		$this->name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getName() {
+		return $this->name;
+	}
 
 }
 
