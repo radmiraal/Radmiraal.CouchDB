@@ -166,7 +166,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 			$propertyName = lcfirst(substr($methodName, 9));
 				// Use findBy instead of findOneBy as that method does not use a limit
 			$result = $this->backend->findBy(array($propertyName => $arguments[0]), NULL, 1);
-			if (count($result) > 0) {
+			if (count($result) === 1) {
 				return $result[0];
 			}
 			return NULL;

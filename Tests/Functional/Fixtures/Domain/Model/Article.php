@@ -37,6 +37,7 @@ class Article {
 	/**
 	 * @var string
 	 * @ODM\Field(type="string")
+	 * @ODM\Index
 	 */
 	protected $title;
 

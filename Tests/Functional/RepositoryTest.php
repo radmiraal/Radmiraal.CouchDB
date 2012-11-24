@@ -119,10 +119,9 @@ class RepositoryTest extends AbstractFunctionalTest {
 		$model->setTitle('foo');
 		$this->articleRepository->add($model);
 		$this->documentManager->flush();
+
 		$result = $this->articleRepository->findOneByTitle('foo');
-//		var_dump($result);
-//		die();
-//		$this->assertNotNull($result->getId());
+		$this->assertNotNull($result->getId());
 	}
 
 }
