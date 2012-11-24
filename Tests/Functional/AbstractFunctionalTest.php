@@ -77,6 +77,8 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 		$couchDbHelper = new \Radmiraal\CouchDB\CouchDBHelper();
 		$couchDbHelper->injectSettings($this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB')));
 		$couchDbHelper->injectDocumentManagerFactory($this->documentManagerFactory);
+		$couchDbHelper->createDatabaseIfNotExists();
+		$couchDbHelper->createOrUpdateDesignDocuments();
 	}
 
 	/**
