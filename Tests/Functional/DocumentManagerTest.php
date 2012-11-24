@@ -30,14 +30,14 @@ class DocumentManagerTest extends AbstractFunctionalTest {
 	 * @test
 	 */
 	public function checkIfHttpClientIsInstantiated() {
-		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->httpClient);
+		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->documentManager->getHttpClient());
 	}
 
 	/**
 	 * @test
 	 */
 	public function checkIfDatabaseIsCreated() {
-		$res = $this->httpClient->request('GET', '/' . $this->settings['databaseName']);
+		$res = $this->documentManager->getHttpClient()->request('GET', '/' . $this->settings['databaseName']);
 		$this->assertEquals(200, $res->status);
 	}
 

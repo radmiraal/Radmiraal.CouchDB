@@ -28,11 +28,6 @@ namespace Radmiraal\CouchDB\Tests\Functional;
 abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
 
 	/**
-	 * @var \Doctrine\CouchDB\HTTP\SocketClient
-	 */
-	protected $httpClient;
-
-	/**
 	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
 	 */
 	protected $documentManagerFactory;
@@ -61,16 +56,6 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 		$configurationManager = $this->objectManager->get('TYPO3\Flow\Configuration\ConfigurationManager');
 		$this->settings = $this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB', 'persistence', 'backendOptions'));
 
-		$this->httpClient = new \Doctrine\CouchDB\HTTP\SocketClient(
-			$this->settings['host'],
-			$this->settings['port'],
-			$this->settings['username'],
-			$this->settings['password'],
-			$this->settings['ip']
-		);
-
-		$this->httpClient->request('PUT', '/' . $this->settings['databaseName']);
-
 		$this->documentManagerFactory = $this->objectManager->get('\Radmiraal\CouchDB\Persistence\DocumentManagerFactory');
 		$this->documentManager = $this->documentManagerFactory->create();
 
@@ -85,7 +70,7 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	 * Clean up database after running tests
 	 */
 	public function tearDown() {
-		$this->httpClient->request('DELETE', '/' . $this->settings['databaseName']);
+		$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
 	}
 
 }
