@@ -33,6 +33,11 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	protected $httpClient;
 
 	/**
+	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
+	 */
+	protected $documentManagerFactory;
+
+	/**
 	 * @var \Doctrine\ODM\CouchDB\DocumentManager
 	 */
 	protected $documentManager;
@@ -66,8 +71,12 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 
 		$this->httpClient->request('PUT', '/' . $this->settings['databaseName']);
 
-		$documentManagerFactory = new \Radmiraal\CouchDB\Persistence\DocumentManagerFactory($this->settings);
-		$this->documentManager = $documentManagerFactory->create();
+		$this->documentManagerFactory = $this->objectManager->get('\Radmiraal\CouchDB\Persistence\DocumentManagerFactory');
+		$this->documentManager = $this->documentManagerFactory->create();
+
+		$couchDbHelper = new \Radmiraal\CouchDB\CouchDBHelper();
+		$couchDbHelper->injectSettings($this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB')));
+		$couchDbHelper->injectDocumentManagerFactory($this->documentManagerFactory);
 	}
 
 	/**

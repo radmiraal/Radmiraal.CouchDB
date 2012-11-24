@@ -21,13 +21,17 @@ namespace Radmiraal\CouchDB\Persistence;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
+use TYPO3\Flow\Annotations as Flow;
+
 /**
  * Factory for creating Doctrine ODM DocumentManager instances
+ * @Flow\Scope("singleton")
  */
 class DocumentManagerFactory {
 
 	/**
 	 * @var \TYPO3\Flow\Utility\Environment
+	 * @Flow\Inject
 	 */
 	protected $environment;
 
@@ -37,18 +41,25 @@ class DocumentManagerFactory {
 	protected $settings;
 
 	/**
-	 * @param \TYPO3\Flow\Utility\Environment $environment
-	 * @return void
+	 * @var \TYPO3\Flow\Configuration\ConfigurationManager
+	 * @Flow\Inject
 	 */
-	public function injectEnvironment(\TYPO3\Flow\Utility\Environment $environment) {
-		$this->environment = $environment;
-	}
+	protected $configurationManager;
 
 	/**
-	 * @param array $settings
+	 * @var \Doctrine\ODM\CouchDB\DocumentManager
 	 */
-	public function __construct(array $settings) {
-		$this->settings = array_merge(array('host' => 'localhost', 'port' => 5984), $settings);
+	protected $documentManager;
+
+	/**
+	 * @return void
+	 */
+	public function initializeObject() {
+		$settings = $this->configurationManager->getConfiguration(
+			\TYPO3\Flow\Configuration\ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
+			'Radmiraal.CouchDB'
+		);
+		$this->settings = array_merge(array('host' => 'localhost', 'port' => 5984), $settings['persistence']['backendOptions']);
 	}
 
 	/**
@@ -57,6 +68,10 @@ class DocumentManagerFactory {
 	 * @return \Doctrine\ODM\CouchDB\DocumentManager
 	 */
 	public function create() {
+		if (isset($this->documentManager)) {
+			return $this->documentManager;
+		}
+
 		$httpClient = new \Doctrine\CouchDB\HTTP\SocketClient(
 			$this->settings['host'],
 			$this->settings['port'],
@@ -79,7 +94,9 @@ class DocumentManagerFactory {
 		$config->setAutoGenerateProxyClasses(TRUE);
 
 		$couchClient = new \Doctrine\CouchDB\CouchDBClient($httpClient, $this->settings['databaseName']);
-		return \Doctrine\ODM\CouchDB\DocumentManager::create($couchClient, $config);
+		$this->documentManager = \Doctrine\ODM\CouchDB\DocumentManager::create($couchClient, $config);
+
+		return $this->documentManager;
 	}
 
 }

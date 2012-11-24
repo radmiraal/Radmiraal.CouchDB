@@ -37,9 +37,10 @@ class UnstructuredModelTest extends AbstractFunctionalTest {
 		$this->documentManager->persist($model);
 		$this->documentManager->flush();
 
-		$result = $this->documentManager->getRepository('\Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\DynamicModel')->findAll();
+		$result = $this->documentManager->getRepository('\Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\UnstructuredModel')->findAll();
+
 		$this->assertEquals(1, count($result));
-		$this->assertInstanceOf('Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\DynamicModel', $result[0]);
+		$this->assertInstanceOf('Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\UnstructuredModel', $result[0]);
 		$this->assertEquals('Foo', $result[0]->getTitle());
 	}
 
