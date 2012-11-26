@@ -70,6 +70,7 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	 * Clean up database after running tests
 	 */
 	public function tearDown() {
+		parent::tearDown();
 		$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
 	}
 
