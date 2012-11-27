@@ -124,7 +124,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 */
 	public function removeAll() {
 		$objects = $this->backend->findAll();
-		foreach($objects as $object) {
+		foreach ($objects as $object) {
 			$this->remove($object);
 		}
 	}
@@ -177,7 +177,21 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 		}
 	}
 
-	public function createQuery() {
+	/**
+	 * @param string $designDocumentName
+	 * @param string $constraint
+	 * @param string $type
+	 * @return \Doctrine\CouchDB\View\AbstractQuery
+	 */
+	public function createQuery($designDocumentName = 'doctrine_repositories', $constraint = 'equal_constraint', $type = NULL) {
+		switch($type) {
+			case 'lucene':
+				return $this->documentManager->createLuceneQuery($designDocumentName, $constraint);
+			case 'native':
+				return $this->documentManager->createNativeQuery($designDocumentName, $constraint);
+			default:
+				return $this->documentManager->createQuery($designDocumentName, $constraint);
+		}
 	}
 
 	public function setDefaultOrderings(array $defaultOrderings) {
