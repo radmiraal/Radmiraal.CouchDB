@@ -29,6 +29,18 @@ use TYPO3\Flow\Annotations as Flow;
 abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryInterface {
 
 	/**
+	 * @var \TYPO3\Flow\Reflection\ReflectionService
+	 * @Flow\Inject
+	 */
+	protected $reflectionService;
+
+	/**
+	 * @var \TYPO3\Flow\Persistence\PersistenceManagerInterface
+	 * @Flow\Inject
+	 */
+	protected $persistenceManager;
+
+	/**
 	 * @var \Doctrine\ODM\CouchDB\DocumentRepository
 	 */
 	protected $backend;
@@ -161,20 +173,32 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	public function __call($methodName, $arguments) {
 		if (substr($methodName, 0, 6) === 'findBy') {
 			$propertyName = lcfirst(substr($methodName, 6));
-			return $this->backend->findBy(array($propertyName => $arguments[0]));
+			return $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
 		} elseif (substr($methodName, 0, 9) === 'findOneBy') {
 			$propertyName = lcfirst(substr($methodName, 9));
 				// Use findBy instead of findOneBy as that method does not use a limit
-			$result = $this->backend->findBy(array($propertyName => $arguments[0]), NULL, 1);
+			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])), NULL, 1);
 			if (count($result) === 1) {
 				return $result[0];
 			}
 			return NULL;
 		} elseif (substr($methodName, 0, 7) === 'countBy') {
 			$propertyName = lcfirst(substr($methodName, 7));
-			$result = $this->backend->findBy(array($propertyName => $arguments[0]));
+			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
 			return count($result);
 		}
+	}
+
+	/**
+	 * @param mixed $value
+	 * @return mixed object
+	 */
+	protected function getQueryMatchValue($value) {
+		if (is_object($value)
+			&& $this->reflectionService->isClassAnnotatedWith(get_class($value), 'TYPO3\Flow\Annotations\Entity')) {
+				return $this->persistenceManager->getIdentifierByObject($value);
+		}
+		return $value;
 	}
 
 	/**
