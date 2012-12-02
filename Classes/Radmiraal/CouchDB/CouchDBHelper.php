@@ -128,6 +128,14 @@ class CouchDBHelper {
 		}
 		return FALSE;
 	}
+
+	/**
+	 * @return void
+	 */
+	public function flush() {
+		$this->documentManager->flush();
+	}
+
 }
 
 ?>
