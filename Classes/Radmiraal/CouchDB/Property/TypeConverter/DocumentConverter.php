@@ -187,8 +187,6 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	 * @throws \TYPO3\Flow\Property\Exception\InvalidPropertyMappingConfigurationException
 	 */
 	protected function handleArrayData(array $source, $targetType, array &$convertedChildProperties, \TYPO3\Flow\Property\PropertyMappingConfigurationInterface $configuration = NULL) {
-		\TYPO3\Flow\var_dump($source);
-
 		$effectiveTargetType = $targetType;
 		if (isset($source['__type'])) {
 			if ($configuration->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\DocumentConverter', self::CONFIGURATION_OVERRIDE_TARGET_TYPE_ALLOWED) !== TRUE) {
