@@ -114,7 +114,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 			throw new \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException('The value given to update() was ' . $type . ' , however the ' . get_class($this) . ' can only store ' . $this->entityClassName . ' instances.', 1249479625);
 		}
 
-		$this->documentManager->persist($object);
+		$this->documentManager->merge($object);
 	}
 
 	/**
