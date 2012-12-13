@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Unit;
+namespace Radmiraal\CouchDB\Tests\Unit\Fixtures;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,49 +21,7 @@ namespace Radmiraal\CouchDB\Tests\Unit;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-/**
- *
- */
-class DocumentTest extends \TYPO3\Flow\Tests\UnitTestCase {
-
-	protected $document;
-
-	public function setUp() {
-		$this->document = new \Radmiraal\CouchDB\Tests\Unit\Fixtures\Document();
-	}
-
-	/**
-	 * @return array
-	 */
-	public function propertyCollectionProvider() {
-		return array(
-			array('foo', 'bar'),
-			array('baz', (object)array('test')),
-			array('bar', array('test')),
-			array('cab', new \Exception('test'))
-		);
-	}
-
-	/**
-	 * @test
-	 * @dataProvider propertyCollectionProvider
-	 */
-	public function aDocumentAcceptsUnknownPropertiesByDirectAccess($property, $value) {
-		$this->document->$property = $value;
-		$this->assertEquals($value, $this->document->$property);
-	}
-
-	/**
-	 * @test
-	 * @dataProvider propertyCollectionProvider
-	 */
-	public function aDocumentAcceptsUnknownPropertiesByGetterSetterMethods($property, $value) {
-		$setter = 'set' . ucfirst($property);
-		$getter = 'get' . ucfirst($property);
-
-		$this->document->$setter($value);
-		$this->assertEquals($value, $this->document->$getter($property));
-	}
+class Document extends \Radmiraal\CouchDB\Persistence\AbstractDocument {
 
 }
 
