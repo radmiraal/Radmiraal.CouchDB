@@ -30,6 +30,12 @@ use TYPO3\Flow\Annotations as Flow;
 class DocumentManagerFactory {
 
 	/**
+	 * @var \TYPO3\Flow\Package\PackageManagerInterface
+	 * @Flow\Inject
+	 */
+	protected $packageManager;
+
+	/**
 	 * @var \TYPO3\Flow\Utility\Environment
 	 * @Flow\Inject
 	 */
@@ -85,6 +91,28 @@ class DocumentManagerFactory {
 
 		$config = new \Doctrine\ODM\CouchDB\Configuration();
 		$config->setMetadataDriverImpl($metaDriver);
+
+		$packages = $this->packageManager->getActivePackages();
+
+		foreach ($packages as $package) {
+			$designDocumentRootPath = \TYPO3\Flow\Utility\Files::concatenatePaths(array($package->getPackagePath(), 'Migrations/CouchDB/DesignDocuments'));
+			if (is_dir($designDocumentRootPath)) {
+				$packageDesignDocumentFolders = glob($designDocumentRootPath . '/*');
+				foreach ($packageDesignDocumentFolders as $packageDesignDocumentFolder) {
+					if (is_dir($packageDesignDocumentFolder)) {
+						$designDocumentName = strtolower(basename($packageDesignDocumentFolder));
+						$config->addDesignDocument(
+							$designDocumentName,
+							'Radmiraal\CouchDB\View\Migration',
+							array(
+								'packageKey' => $package->getPackageKey(),
+								'path' => $packageDesignDocumentFolder
+							)
+						);
+					}
+				}
+			}
+		}
 
 		$proxyDirectory = \TYPO3\Flow\Utility\Files::concatenatePaths(array($this->environment->getPathToTemporaryDirectory(), 'DoctrineODM/Proxies'));
 		\TYPO3\Flow\Utility\Files::createDirectoryRecursively($proxyDirectory);

@@ -75,15 +75,12 @@ class CouchDBHelper {
 
 
 	/**
-	 * @param array $designDocumentNames
 	 * @return array
 	 */
-	public function createOrUpdateDesignDocuments(array $designDocumentNames = array()) {
+	public function createOrUpdateDesignDocuments() {
 		$result = array('success' => array(), 'error' => array());
 
-		if ($designDocumentNames === array()) {
-			$designDocumentNames = $this->documentManager->getConfiguration()->getDesignDocumentNames();
-		}
+		$designDocumentNames = $this->documentManager->getConfiguration()->getDesignDocumentNames();
 
 		foreach ($designDocumentNames as $docName) {
 			$designDocData = $this->documentManager->getConfiguration()->getDesignDocument($docName);
@@ -106,6 +103,12 @@ class CouchDBHelper {
 		return $result;
 	}
 
+	/**
+	 * @return \Doctrine\CouchDB\CouchDBClient
+	 */
+	public function getClient() {
+		return $this->documentManager->getCouchDBClient();
+	}
 
 	/**
 	 * @param array $local
