@@ -30,22 +30,12 @@ use TYPO3\Flow\Annotations as Flow;
  *
  * @Flow\Scope("singleton")
  */
-class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConverter {
+class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObjectConverter {
 
 	/**
 	 * @var string
 	 */
-	const PATTERN_MATCH_UUID = '/([a-f0-9]){8}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){12}/';
-
-	/**
-	 * @var integer
-	 */
-	const CONFIGURATION_MODIFICATION_ALLOWED = 1;
-
-	/**
-	 * @var integer
-	 */
-	const CONFIGURATION_CREATION_ALLOWED = 2;
+	const PATTERN_MATCH_UUID = '/[a-zA-Z_-0-9]/';
 
 	/**
 	 * @var array
@@ -68,6 +58,19 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	protected $documentManagementFactory;
 
 	/**
+	 * @var \TYPO3\Flow\Reflection\ReflectionService
+	 */
+	protected $reflectionService;
+
+	/**
+	 * @param \TYPO3\Flow\Reflection\ReflectionService $reflectionService
+	 * @return void
+	 */
+	public function injectReflectionService(\TYPO3\Flow\Reflection\ReflectionService $reflectionService) {
+		$this->reflectionService = $reflectionService;
+	}
+
+	/**
 	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
 	 * @return void
 	 */
@@ -84,9 +87,7 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	 * @return boolean
 	 */
 	public function canConvertFrom($source, $targetType) {
-		return (
-			$this->reflectionService->isClassAnnotatedWith($targetType, 'Doctrine\ODM\CouchDB\Mapping\Annotations\Document')
-		);
+		return $this->reflectionService->isClassAnnotatedWith($targetType, 'Doctrine\ODM\CouchDB\Mapping\Annotations\Document');
 	}
 
 	/**
@@ -115,21 +116,21 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	 * @throws \TYPO3\Flow\Property\Exception\InvalidTargetException
 	 */
 	public function getTypeOfChildProperty($targetType, $propertyName, \TYPO3\Flow\Property\PropertyMappingConfigurationInterface $configuration) {
-		$configuredTargetType = $configuration->getConfigurationFor($propertyName)->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\DocumentConverter', self::CONFIGURATION_TARGET_TYPE);
+		$configuredTargetType = $configuration->getConfigurationFor($propertyName)->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\PersistentObjectConverter', self::CONFIGURATION_TARGET_TYPE);
 		if ($configuredTargetType !== NULL) {
 			return $configuredTargetType;
 		}
 
-		$classProperties = $this->reflectionService->getClassPropertyNames($targetType);
+		$varAnnotations = $this->reflectionService->getPropertyTagValues($targetType, $propertyName, 'var');
 
-		if (in_array($propertyName, $classProperties)) {
-			$varAnnotations = $this->reflectionService->getPropertyTagValues($targetType, $propertyName, 'var');
-			if (isset($varAnnotations[0])) {
-				return $varAnnotations[0];
-			}
+		if ($varAnnotations === array()) {
+				// No @var annotation found for property, use string as default
+				// TODO: Read this from some kind of configuration
+			return 'string';
 		}
 
-		return 'string';
+		$propertyInformation = \TYPO3\Flow\Utility\TypeHandling::parseType($varAnnotations[0]);
+		return $propertyInformation['type'] . ($propertyInformation['elementType'] !== NULL ? '<' . $propertyInformation['elementType'] . '>' : '');
 	}
 
 	/**
@@ -145,11 +146,6 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	 */
 	public function convertFrom($source, $targetType, array $convertedChildProperties = array(), \TYPO3\Flow\Property\PropertyMappingConfigurationInterface $configuration = NULL) {
 		if (is_array($source)) {
-			if ($this->reflectionService->isClassAnnotatedWith($targetType, 'TYPO3\Flow\Annotations\ValueObject')) {
-				// Unset identity for valueobject to use constructor mapping, since the identity is determined from
-				// constructor arguments
-				unset($source['__identity']);
-			}
 			$object = $this->handleArrayData($source, $targetType, $convertedChildProperties, $configuration);
 		} elseif (is_string($source)) {
 			if ($source === '') {
@@ -159,7 +155,17 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 		} else {
 			throw new \InvalidArgumentException('Only strings and arrays are accepted.', 1305630314);
 		}
+
 		foreach ($convertedChildProperties as $propertyName => $propertyValue) {
+			if ($this->reflectionService->isPropertyAnnotatedWith($targetType, $propertyName, 'Doctrine\ODM\CouchDB\Mapping\Annotations\Attachments')) {
+				$attachments = array();
+				foreach ($propertyValue as $version => $value) {
+					$safeFileName = preg_replace('/[^a-zA-Z-_0-9\.]*/', '', $value['name']);
+					$attachments[$safeFileName] = \Doctrine\CouchDB\Attachment::createFromBinaryData(\TYPO3\Flow\Utility\Files::getFileContents($value['tmp_name']));
+				}
+				$propertyValue = $attachments;
+			}
+
 			$result = \TYPO3\Flow\Reflection\ObjectAccess::setProperty($object, $propertyName, $propertyValue);
 			if ($result === FALSE) {
 				$exceptionMessage = sprintf(
@@ -188,15 +194,16 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	 */
 	protected function handleArrayData(array $source, $targetType, array &$convertedChildProperties, \TYPO3\Flow\Property\PropertyMappingConfigurationInterface $configuration = NULL) {
 		$effectiveTargetType = $targetType;
-		if (isset($source['__type'])) {
-			if ($configuration->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\DocumentConverter', self::CONFIGURATION_OVERRIDE_TARGET_TYPE_ALLOWED) !== TRUE) {
-				throw new \TYPO3\Flow\Property\Exception\InvalidPropertyMappingConfigurationException('Override of target type not allowed. To enable this, you need to set the PropertyMappingConfiguration Value "CONFIGURATION_OVERRIDE_TARGET_TYPE_ALLOWED" to TRUE.', 1317050430);
-			}
-			$effectiveTargetType = $source['__type'];
-		}
 		if (isset($source['__identity'])) {
 			$object = $this->fetchObjectFromPersistence($source['__identity'], $effectiveTargetType);
+
+			if (count($source) > 1 && ($configuration === NULL || $configuration->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\PersistentObjectConverter', self::CONFIGURATION_MODIFICATION_ALLOWED) !== TRUE)) {
+				throw new \TYPO3\Flow\Property\Exception\InvalidPropertyMappingConfigurationException('Modification of persistent objects not allowed. To enable this, you need to set the PropertyMappingConfiguration Value "CONFIGURATION_MODIFICATION_ALLOWED" to TRUE.', 1297932028);
+			}
 		} else {
+			if ($configuration === NULL || $configuration->getConfigurationValue('TYPO3\Flow\Property\TypeConverter\PersistentObjectConverter', self::CONFIGURATION_CREATION_ALLOWED) !== TRUE) {
+				throw new \TYPO3\Flow\Property\Exception\InvalidPropertyMappingConfigurationException('Creation of objects not allowed. To enable this, you need to set the PropertyMappingConfiguration Value "CONFIGURATION_CREATION_ALLOWED" to TRUE');
+			}
 			$object = $this->buildObject($convertedChildProperties, $effectiveTargetType);
 		}
 		if ($effectiveTargetType !== $targetType && !$object instanceof $targetType) {
@@ -208,7 +215,7 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	/**
 	 * Fetch an object from persistence layer.
 	 *
-	 * @param mixed $identity
+	 * @param string $identity
 	 * @param string $targetType
 	 * @return object
 	 * @throws \TYPO3\Flow\Property\Exception\TargetNotFoundException
@@ -217,60 +224,17 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\ObjectConvert
 	protected function fetchObjectFromPersistence($identity, $targetType) {
 		if (is_string($identity)) {
 			$object = $this->documentManager->find($targetType, $identity);
-		} elseif (is_array($identity)) {
-			$object = $this->findObjectByIdentityProperties($identity, $targetType);
 		} else {
-			throw new \TYPO3\Flow\Property\Exception\InvalidSourceException('The identity property "' . $identity . '" is neither a string nor an array.', 1297931020);
+			throw new \TYPO3\Flow\Property\Exception\InvalidSourceException('The identity property "' . $identity . '" is not a string.', 1356681336);
 		}
 
 		if ($object === NULL) {
-			throw new \TYPO3\Flow\Property\Exception\TargetNotFoundException('Object with identity "' . print_r($identity, TRUE) . '" not found.', 1297933823);
+			throw new \TYPO3\Flow\Property\Exception\TargetNotFoundException('Document with identity "' . print_r($identity, TRUE) . '" not found.', 1356681356);
 		}
 
 		return $object;
 	}
 
-	/**
-	 * Finds an object from the repository by searching for its identity properties.
-	 *
-	 * @param array $identityProperties Property names and values to search for
-	 * @param string $type The object type to look for
-	 * @return object Either the object matching the identity or NULL if no object was found
-	 * @throws \TYPO3\Flow\Property\Exception\DuplicateObjectException if more than one object was found
-	 */
-	protected function findObjectByIdentityProperties(array $identityProperties, $type) {
-		$query = $this->persistenceManager->createQueryForType($type);
-		$classSchema = $this->reflectionService->getClassSchema($type);
-
-		$equals = array();
-		foreach ($classSchema->getIdentityProperties() as $propertyName => $propertyType) {
-			if (isset($identityProperties[$propertyName])) {
-				if ($propertyType === 'string') {
-					$equals[] = $query->equals($propertyName, $identityProperties[$propertyName], FALSE);
-				} else {
-					$equals[] = $query->equals($propertyName, $identityProperties[$propertyName]);
-				}
-			}
-		}
-
-		if (count($equals) === 1) {
-			$constraint = current($equals);
-		} else {
-			$constraint = $query->logicalAnd(current($equals), next($equals));
-			while (($equal = next($equals)) !== FALSE) {
-				$constraint = $query->logicalAnd($constraint, $equal);
-			}
-		}
-
-		$objects = $query->matching($constraint)->execute();
-		$numberOfResults = $objects->count();
-		if ($numberOfResults === 1) {
-			return $objects->getFirst();
-		} elseif ($numberOfResults === 0) {
-			return NULL;
-		} else {
-			throw new \TYPO3\Flow\Property\Exception\DuplicateObjectException('More than one object was returned for the given identity, this is a constraint violation.', 1259612399);
-		}
-	}
 }
+
 ?>
