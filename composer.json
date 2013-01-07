@@ -7,7 +7,9 @@
 	],
 	"require": {
 		"typo3/flow": "*",
-		"doctrine/couchdb-odm": "dev-master"
+		"doctrine/couchdb-odm": "dev-master",
+		"doctrine/dbal": "2.3.1",
+		"doctrine/orm": "2.3.1"
 	},
 	"autoload": {
 		"psr-0": {

@@ -71,7 +71,9 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	 */
 	public function tearDown() {
 		parent::tearDown();
-		$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
+		if (isset($this->documentManager)) {
+			$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
+		}
 	}
 
 }

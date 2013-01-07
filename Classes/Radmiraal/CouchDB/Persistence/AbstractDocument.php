@@ -35,6 +35,12 @@ abstract class AbstractDocument {
 	protected $id;
 
 	/**
+	 * @var array
+	 * @ODM\Field(type="mixed")
+	 */
+	protected $data;
+
+	/**
 	 * @param array $data
 	 */
 	public function __construct(array $data = NULL) {
@@ -64,8 +70,10 @@ abstract class AbstractDocument {
 	 * @return mixed
 	 */
 	public function __get($name) {
-		if (isset($this->$name)) {
+		if (property_exists($this, $name)) {
 			return $this->$name;
+		} elseif (isset($this->data[$name])) {
+			return $this->data[$name];
 		}
 		return NULL;
 	}
@@ -76,7 +84,11 @@ abstract class AbstractDocument {
 	 * @return void
 	 */
 	public function __set($name, $value) {
-		$this->$name = $value;
+		if (property_exists($this, $name)) {
+			$this->$name = $value;
+		} else {
+			$this->data[$name] = $value;
+		}
 	}
 
 	/**

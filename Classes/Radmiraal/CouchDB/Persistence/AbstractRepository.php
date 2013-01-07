@@ -221,6 +221,15 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	public function setDefaultOrderings(array $defaultOrderings) {
 	}
 
+	/**
+	 * Convenience method for flushing the document manager
+	 *
+	 * @return void
+	 */
+	public function flushDocumentManager() {
+		$this->documentManager->flush();
+	}
+
 }
 
 ?>
