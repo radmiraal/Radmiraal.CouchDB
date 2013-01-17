@@ -44,6 +44,19 @@ class CouchDBHelper {
 	protected $settings;
 
 	/**
+	 * @var \TYPO3\Flow\Log\SystemLoggerInterface $systemLogger
+	 */
+	protected $systemLogger;
+
+	/**
+	 * @param \TYPO3\Flow\Log\SystemLoggerInterface $systemLogger
+	 * @return void
+	 */
+	public function injectSystemLogger(\TYPO3\Flow\Log\SystemLoggerInterface $systemLogger) {
+		$this->systemLogger = $systemLogger;
+	}
+
+	/**
 	 * @param array $settings
 	 * @return void
 	 */
@@ -72,7 +85,6 @@ class CouchDBHelper {
 			$this->documentManager->getHttpClient()->request('PUT', '/' . $databaseName);
 		}
 	}
-
 
 	/**
 	 * @return array
@@ -136,7 +148,11 @@ class CouchDBHelper {
 	 * @return void
 	 */
 	public function flush() {
-		$this->documentManager->flush();
+		try {
+			$this->documentManager->flush();
+		} catch (\Exception $exception) {
+			$this->systemLogger->log('Could not flush ODM unit of work, error: ' . $exception->getMessage());
+		}
 	}
 
 }
