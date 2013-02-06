@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
+namespace Radmiraal\CouchDB\View;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,59 +21,30 @@ namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
+use TYPO3\Flow\Annotations as Flow;
+
 /**
- *
  */
-class BasicPersistenceTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
+class Migration implements \Doctrine\CouchDB\View\DesignDocument {
 
 	/**
-	 * @var string
+	 * @var array
 	 */
-	protected $dataSourceName = 'http://127.0.0.1:5984';
+	protected $options = array();
 
 	/**
-	 * @var string
+	 * @param array $options
 	 */
-	protected $databaseName = 'radmiraal-couchdb-test';
-
-	/**
-	 * @var \TYPO3\CouchDB\Client
-	 */
-	protected $client;
-
-	public function setUp() {
-		parent::setUp();
-
-		$this->client = new \TYPO3\CouchDB\Client($this->dataSourceName);
-		$this->client->setDatabaseName($this->databaseName);
-
-		if (!$this->client->databaseExists($this->databaseName)) {
-			$this->client->createDatabase($this->databaseName);
-		}
-	}
-
-	public function tearDown() {
-		if ($this->client->databaseExists($this->databaseName)) {
-			$this->client->deleteDatabase($this->databaseName);
-		}
+	public function __construct(array $options) {
+		$this->options = $options;
 	}
 
 	/**
-	 * @test
+	 * @return array
 	 */
-	public function aDocumentCanBePersistedAndRetrieved() {
-		$testObject = (object)array(
-			'foo' => 'bar',
-			'baz' => array('test')
-		);
-
-		$result = $this->client->createDocument($testObject);
-		$this->assertTrue($result->isSuccess());
-
-		$matchValue = $this->client->getDocument($result->getId());
-
-		$this->assertEquals($testObject->foo, $matchValue->foo);
-		$this->assertEquals($testObject->baz, $matchValue->baz);
+	public function getData() {
+		$folderDesignDocument = new \Doctrine\CouchDB\View\FolderDesignDocument($this->options['path']);
+		return $folderDesignDocument->getData();
 	}
 
 }

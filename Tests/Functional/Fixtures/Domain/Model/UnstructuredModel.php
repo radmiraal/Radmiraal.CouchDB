@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Model;
+namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,22 +21,13 @@ namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Model;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Annotations as Flow;
+use Doctrine\ODM\CouchDB\Mapping\Annotations as ODM;
 
 /**
- *
+ * @ODM\Document(indexed=true)
  */
-class TestDocument extends \Radmiraal\CouchDB\Document {
+class UnstructuredModel extends \Radmiraal\CouchDB\Persistence\AbstractDocument {
 
-	/**
-	 * @var string
-	 */
-	protected $title;
-
-	/**
-	 * @var \DateTime
-	 */
-	protected $date;
 }
 
 ?>

@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Persistence;
+namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -24,93 +24,28 @@ namespace Radmiraal\CouchDB\Persistence;
 use Doctrine\ODM\CouchDB\Mapping\Annotations as ODM;
 
 /**
+ * @ODM\EmbeddedDocument
  * @ODM\Document
  */
-abstract class AbstractDocument {
+class Tag {
 
 	/**
 	 * @var string
-	 * @ODM\Id(type="string")
 	 */
-	protected $id;
+	protected $name;
 
 	/**
-	 * @var array
-	 * @ODM\Field(type="mixed")
+	 * @param string $name
 	 */
-	protected $data;
-
-	/**
-	 * @param array $data
-	 */
-	public function __construct(array $data = NULL) {
-		if (is_array($data)) {
-			foreach ($data as $key => $value) {
-				$this->$key = $value;
-			}
-		}
-	}
-
-	/**
-	 * @param string $id
-	 */
-	public function setId($id) {
-		$this->id = $id;
+	public function __construct($name) {
+		$this->name = $name;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function getId() {
-		return $this->id;
-	}
-
-	/**
-	 * @param string $name
-	 * @return mixed
-	 */
-	public function __get($name) {
-		if (property_exists($this, $name)) {
-			return $this->$name;
-		} elseif (isset($this->data[$name])) {
-			return $this->data[$name];
-		}
-		return NULL;
-	}
-
-	/**
-	 * @param string $name
-	 * @param mixed $value
-	 * @return void
-	 */
-	public function __set($name, $value) {
-		if (property_exists($this, $name)) {
-			$this->$name = $value;
-		} else {
-			$this->data[$name] = $value;
-		}
-	}
-
-	/**
-	 * Magic get* / set* method
-	 *
-	 * @param string $method
-	 * @param array $arguments
-	 * @return mixed
-	 */
-	function __call($method, array $arguments) {
-		if (strlen($method) <= 3) {
-			return NULL;
-		}
-
-		$methodName = '__' . substr($method, 0, 3);
-
-		if ($methodName !== '__set' && $methodName !== '__get') {
-			return NULL;
-		}
-
-		$var = lcfirst(substr($method, 3));
-		return call_user_func_array(array($this, $methodName), array_merge(array($var), $arguments));
+	public function getName() {
+		return $this->name;
 	}
 
 }

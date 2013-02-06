@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB;
+namespace Radmiraal\CouchDB\Aspect;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,21 +21,28 @@ namespace Radmiraal\CouchDB;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Package\Package as BasePackage;
+use \TYPO3\Flow\Annotations as Flow;
 
 /**
- *
+ * @Flow\Aspect
  */
-class Package extends BasePackage {
+class MigrateAspect {
 
 	/**
-	 * @param \TYPO3\Flow\Core\Bootstrap $bootstrap The current bootstrap
+	 * @var \Radmiraal\CouchDB\CouchDBHelper
+	 * @Flow\Inject
+	 */
+	protected $couchDbHelper;
+
+	/**
+	 * @Flow\AfterReturning("method(TYPO3\Flow\Command\DoctrineCommandController->migrateCommand())")
+	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
 	 * @return void
 	 */
-	public function boot(\TYPO3\Flow\Core\Bootstrap $bootstrap) {
-		$dispatcher = $bootstrap->getSignalSlotDispatcher();
-		$dispatcher->connect('TYPO3\Flow\Mvc\Dispatcher', 'afterControllerInvocation', 'Radmiraal\CouchDB\CouchDBHelper', 'flush');
-		$dispatcher->connect('TYPO3\Flow\Cli\SlaveRequestHandler', 'dispatchedCommandLineSlaveRequest', 'Radmiraal\CouchDB\CouchDBHelper', 'flush');
+	public function callMigrateCommand(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
+			// TODO: Make this less magically quiet and stuff like that ;-)
+		$this->couchDbHelper->createDatabaseIfNotExists();
+		$this->couchDbHelper->createOrUpdateDesignDocuments(array());
 	}
 
 }

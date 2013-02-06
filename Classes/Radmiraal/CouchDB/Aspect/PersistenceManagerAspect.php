@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Repository;
+namespace Radmiraal\CouchDB\Aspect;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,13 +21,34 @@ namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Repository;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Annotations as Flow;
 
 /**
- * @Flow\Scope("singleton")
+ * @Flow\Aspect
  */
-class TestDocumentRepository extends \Radmiraal\CouchDB\Persistence\AbstractRepository {
+class PersistenceManagerAspect {
 
+	/**
+	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->convertObjectToIdentityArray())")
+	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
+	 * @throws \TYPO3\Flow\Persistence\Exception\UnknownObjectException
+	 * @return void
+	 */
+	public function convertDocumentToIdentityArray(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
+		try {
+			$identityArray = $joinPoint->getAdviceChain()->proceed($joinPoint);
+			return $identityArray;
+		} catch (\TYPO3\Flow\Persistence\Exception\UnknownObjectException $exception) {
+			$object = $joinPoint->getMethodArgument('object');
+			if (method_exists($object, 'getId')) {
+				$objectIdentifier = $object->getId();
+				if (!empty($objectIdentifier)) {
+					return array('__identity' => $objectIdentifier);
+				}
+			}
+		}
+		throw new \TYPO3\Flow\Persistence\Exception\UnknownObjectException('The given object is unknown to the Persistence Manager.', 1302628242);
+	}
 
 }
 

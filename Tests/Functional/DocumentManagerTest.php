@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB;
+namespace Radmiraal\CouchDB\Tests\Functional;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -24,7 +24,30 @@ namespace Radmiraal\CouchDB;
 /**
  *
  */
-class Document extends Persistence\AbstractDocument {
+class DocumentManagerTest extends AbstractFunctionalTest {
+
+	/**
+	 * @test
+	 */
+	public function checkIfHttpClientIsInstantiated() {
+		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->documentManager->getHttpClient());
+	}
+
+	/**
+	 * @test
+	 */
+	public function checkIfDatabaseIsCreated() {
+		$res = $this->documentManager->getHttpClient()->request('GET', '/' . $this->settings['databaseName']);
+		$this->assertEquals(200, $res->status);
+	}
+
+	/**
+	 * @test
+	 */
+	public function doctrineOdmAnnotationsCanBeLoaded() {
+		$annotation = new \Doctrine\ODM\CouchDB\Mapping\Annotations\Document();
+		$this->assertInstanceOf('Doctrine\ODM\CouchDB\Mapping\Annotations\Document', $annotation);
+	}
 
 }
 
