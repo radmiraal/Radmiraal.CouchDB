@@ -29,6 +29,25 @@ use TYPO3\Flow\Annotations as Flow;
 class PersistenceManagerAspect {
 
 	/**
+	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected $documentManager;
+
+	/**
+	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
+	 */
+	protected $documentManagementFactory;
+
+	/**
+	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
+	 * @return void
+	 */
+	public function injectDocumentManagerFactory(\Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory) {
+		$this->documentManagementFactory = $documentManagerFactory;
+		$this->documentManager = $this->documentManagementFactory->create();
+	}
+
+	/**
 	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->convertObjectToIdentityArray())")
 	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
 	 * @throws \TYPO3\Flow\Persistence\Exception\UnknownObjectException
@@ -48,6 +67,41 @@ class PersistenceManagerAspect {
 			}
 		}
 		throw new \TYPO3\Flow\Persistence\Exception\UnknownObjectException('The given object is unknown to the Persistence Manager.', 1302628242);
+	}
+
+	/**
+	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->getIdentifierByObject())")
+	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
+	 * @return string
+	 */
+	public function getIdentifierByObject(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
+		$identifier = $joinPoint->getAdviceChain()->proceed($joinPoint);
+
+		if ($identifier === NULL) {
+			if (method_exists($joinPoint->getMethodArgument('object'), 'getId')) {
+				return $joinPoint->getMethodArgument('object')->getId();
+			}
+		}
+
+		return $identifier;
+	}
+
+	/**
+	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->getObjectByIdentifier())")
+	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
+	 * @return object
+	 */
+	public function getObjectByIdentifier(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
+		$object = $joinPoint->getAdviceChain()->proceed($joinPoint);
+
+		if ($object === NULL) {
+			$document = $this->documentManager->find($joinPoint->getMethodArgument('className'), $joinPoint->getMethodArgument('uuid'));
+			if ($document !== NULL) {
+				return $document;
+			}
+		}
+
+		return $object;
 	}
 
 }
