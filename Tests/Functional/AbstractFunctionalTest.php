@@ -53,7 +53,6 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	public function setUp() {
 		parent::setUp();
 
-		$configurationManager = $this->objectManager->get('TYPO3\Flow\Configuration\ConfigurationManager');
 		$this->settings = $this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB', 'persistence', 'backendOptions'));
 
 		$this->documentManagerFactory = $this->objectManager->get('\Radmiraal\CouchDB\Persistence\DocumentManagerFactory');
