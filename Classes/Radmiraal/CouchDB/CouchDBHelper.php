@@ -87,6 +87,19 @@ class CouchDBHelper {
 	}
 
 	/**
+	 * @param string $databaseName
+	 * @return void
+	 */
+	public function deleteDatabaseIfExists($databaseName = NULL) {
+		if ($databaseName === NULL) {
+			$databaseName = $this->settings['databaseName'];
+		}
+		if($this->documentManager->getHttpClient()->request('GET', '/' . $databaseName)->status === 200) {
+			$this->documentManager->getHttpClient()->request('DELETE', '/' . $databaseName);
+		}
+	}
+
+	/**
 	 * @return array
 	 */
 	public function createOrUpdateDesignDocuments() {
