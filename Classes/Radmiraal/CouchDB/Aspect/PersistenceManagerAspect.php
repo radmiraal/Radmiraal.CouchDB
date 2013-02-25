@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
+namespace Radmiraal\CouchDB\Aspect;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,59 +21,33 @@ namespace Radmiraal\CouchDB\Tests\Functional\Persistence;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
+use TYPO3\Flow\Annotations as Flow;
+
 /**
- *
+ * @Flow\Aspect
  */
-class BasicPersistenceTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
+class PersistenceManagerAspect {
 
 	/**
-	 * @var string
+	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->convertObjectToIdentityArray())")
+	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
+	 * @throws \TYPO3\Flow\Persistence\Exception\UnknownObjectException
+	 * @return array
 	 */
-	protected $dataSourceName = 'http://127.0.0.1:5984';
-
-	/**
-	 * @var string
-	 */
-	protected $databaseName = 'radmiraal-couchdb-test';
-
-	/**
-	 * @var \TYPO3\CouchDB\Client
-	 */
-	protected $client;
-
-	public function setUp() {
-		parent::setUp();
-
-		$this->client = new \TYPO3\CouchDB\Client($this->dataSourceName);
-		$this->client->setDatabaseName($this->databaseName);
-
-		if (!$this->client->databaseExists($this->databaseName)) {
-			$this->client->createDatabase($this->databaseName);
+	public function convertDocumentToIdentityArray(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
+		try {
+			$identityArray = $joinPoint->getAdviceChain()->proceed($joinPoint);
+			return $identityArray;
+		} catch (\TYPO3\Flow\Persistence\Exception\UnknownObjectException $exception) {
+			$object = $joinPoint->getMethodArgument('object');
+			if (method_exists($object, 'getId')) {
+				$objectIdentifier = $object->getId();
+				if (!empty($objectIdentifier)) {
+					return array('__identity' => $objectIdentifier);
+				}
+			}
 		}
-	}
-
-	public function tearDown() {
-		if ($this->client->databaseExists($this->databaseName)) {
-			$this->client->deleteDatabase($this->databaseName);
-		}
-	}
-
-	/**
-	 * @test
-	 */
-	public function aDocumentCanBePersistedAndRetrieved() {
-		$testObject = (object)array(
-			'foo' => 'bar',
-			'baz' => array('test')
-		);
-
-		$result = $this->client->createDocument($testObject);
-		$this->assertTrue($result->isSuccess());
-
-		$matchValue = $this->client->getDocument($result->getId());
-
-		$this->assertEquals($testObject->foo, $matchValue->foo);
-		$this->assertEquals($testObject->baz, $matchValue->baz);
+		throw new \TYPO3\Flow\Persistence\Exception\UnknownObjectException('The given object is unknown to the Persistence Manager.', 1302628242);
 	}
 
 }

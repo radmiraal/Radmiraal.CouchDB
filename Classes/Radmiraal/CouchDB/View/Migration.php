@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Repository;
+namespace Radmiraal\CouchDB\View;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,13 +21,31 @@ namespace Radmiraal\CouchDB\Tests\Functional\Fixtures\Repository;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Annotations as Flow;
 
 /**
- * @Flow\Scope("singleton")
  */
-class TestDocumentRepository extends \Radmiraal\CouchDB\Persistence\AbstractRepository {
+class Migration implements \Doctrine\CouchDB\View\DesignDocument {
 
+	/**
+	 * @var array
+	 */
+	protected $options = array();
+
+	/**
+	 * @param array $options
+	 */
+	public function __construct(array $options) {
+		$this->options = $options;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getData() {
+		$folderDesignDocument = new \Doctrine\CouchDB\View\FolderDesignDocument($this->options['path']);
+		return $folderDesignDocument->getData();
+	}
 
 }
 

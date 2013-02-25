@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB\Persistence;
+namespace Radmiraal\CouchDB\Tests\Functional;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,96 +21,58 @@ namespace Radmiraal\CouchDB\Persistence;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use Doctrine\ODM\CouchDB\Mapping\Annotations as ODM;
-
 /**
- * @ODM\Document
+ * Abstract functional test class, setting up a DocumentManager and httpClient
+ * object for usage in functional tests.
  */
-abstract class AbstractDocument {
+abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCase {
+
+	/**
+	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
+	 */
+	protected $documentManagerFactory;
+
+	/**
+	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected $documentManager;
 
 	/**
 	 * @var string
-	 * @ODM\Id(type="string")
 	 */
-	protected $id;
+	protected $databaseName = 'doctrine_sandbox';
 
 	/**
 	 * @var array
-	 * @ODM\Field(type="mixed")
 	 */
-	protected $data;
+	protected $settings;
 
 	/**
-	 * @param array $data
+	 * Set up test
 	 */
-	public function __construct(array $data = NULL) {
-		if (is_array($data)) {
-			foreach ($data as $key => $value) {
-				$this->$key = $value;
-			}
-		}
+	public function setUp() {
+		parent::setUp();
+
+		$this->settings = $this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB', 'persistence', 'backendOptions'));
+
+		$this->documentManagerFactory = $this->objectManager->get('\Radmiraal\CouchDB\Persistence\DocumentManagerFactory');
+		$this->documentManager = $this->documentManagerFactory->create();
+
+		$couchDbHelper = new \Radmiraal\CouchDB\CouchDBHelper();
+		$couchDbHelper->injectSettings($this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB')));
+		$couchDbHelper->injectDocumentManagerFactory($this->documentManagerFactory);
+		$couchDbHelper->createDatabaseIfNotExists();
+		$couchDbHelper->createOrUpdateDesignDocuments();
 	}
 
 	/**
-	 * @param string $id
+	 * Clean up database after running tests
 	 */
-	public function setId($id) {
-		$this->id = $id;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getId() {
-		return $this->id;
-	}
-
-	/**
-	 * @param string $name
-	 * @return mixed
-	 */
-	public function __get($name) {
-		if (property_exists($this, $name)) {
-			return $this->$name;
-		} elseif (isset($this->data[$name])) {
-			return $this->data[$name];
+	public function tearDown() {
+		parent::tearDown();
+		if (isset($this->documentManager)) {
+			$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
 		}
-		return NULL;
-	}
-
-	/**
-	 * @param string $name
-	 * @param mixed $value
-	 * @return void
-	 */
-	public function __set($name, $value) {
-		if (property_exists($this, $name)) {
-			$this->$name = $value;
-		} else {
-			$this->data[$name] = $value;
-		}
-	}
-
-	/**
-	 * Magic get* / set* method
-	 *
-	 * @param string $method
-	 * @param array $arguments
-	 * @return mixed
-	 */
-	function __call($method, array $arguments) {
-		if (strlen($method) <= 3) {
-			return NULL;
-		}
-
-		$methodName = '__' . substr($method, 0, 3);
-
-		if ($methodName !== '__set' && $methodName !== '__get') {
-			return NULL;
-		}
-
-		$var = lcfirst(substr($method, 3));
-		return call_user_func_array(array($this, $methodName), array_merge(array($var), $arguments));
 	}
 
 }

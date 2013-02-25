@@ -21,97 +21,215 @@ namespace Radmiraal\CouchDB\Persistence;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Annotations as Flow;
 
 /**
- * @Flow\Scope("singleton")
+ *
  */
 abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryInterface {
 
 	/**
-	 * @var \Radmiraal\CouchDB\Persistence\PersistenceManager
+	 * @var \TYPO3\Flow\Reflection\ReflectionService
+	 * @Flow\Inject
+	 */
+	protected $reflectionService;
+
+	/**
+	 * @var \TYPO3\Flow\Persistence\PersistenceManagerInterface
 	 * @Flow\Inject
 	 */
 	protected $persistenceManager;
 
+	/**
+	 * @var \Doctrine\ODM\CouchDB\DocumentRepository
+	 */
+	protected $backend;
+
+	/**
+	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected $documentManager;
+
+	/**
+	 * Warning: if you think you want to set this,
+	 * look at RepositoryInterface::ENTITY_CLASSNAME first!
+	 *
+	 * @var string
+	 */
+	protected $entityClassName;
+
+	/**
+	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
+	 */
+	protected $documentManagementFactory;
+
+	/**
+	 * @var array
+	 */
+	protected $defaultOrderings = array();
+
+	/**
+	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
+	 * @return void
+	 */
+	public function injectDocumentManagerFactory(\Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory) {
+		$this->documentManagementFactory = $documentManagerFactory;
+		$this->documentManager = $this->documentManagementFactory->create();
+		$this->backend = $this->documentManager->getRepository($this->getEntityClassName());
+	}
+
+	/**
+	 * Initializes a new Repository.
+	 */
 	public function __construct() {
 		if (static::ENTITY_CLASSNAME === NULL) {
-			$this->objectType = str_replace(array('\\Repository\\', 'Repository'), array('\\Model\\', ''), get_class($this));
+			$this->entityClassName = preg_replace(array('/\\\Repository\\\/', '/Repository$/'), array('\\Model\\', ''), get_class($this));
 		} else {
-			$this->objectType = static::ENTITY_CLASSNAME;
+			$this->entityClassName = static::ENTITY_CLASSNAME;
 		}
+	}
+
+	/**
+	 * @param object $object
+	 * @throws \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException
+	 * @return void
+	 */
+	public function add($object) {
+		if (!is_object($object) || !($object instanceof $this->entityClassName)) {
+			$type = (is_object($object) ? get_class($object) : gettype($object));
+			throw new \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException('The value given to add() was ' . $type . ' , however the ' . get_class($this) . ' can only store ' . $this->entityClassName . ' instances.', 1298403438);
+		}
+
+		$this->documentManager->persist($object);
+	}
+
+	/**
+	 * @param object $object
+	 * @throws \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException
+	 * @return void
+	 */
+	public function update($object) {
+		if (!is_object($object) || !($object instanceof $this->entityClassName)) {
+			$type = (is_object($object) ? get_class($object) : gettype($object));
+			throw new \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException('The value given to update() was ' . $type . ' , however the ' . get_class($this) . ' can only store ' . $this->entityClassName . ' instances.', 1249479625);
+		}
+
+		$this->documentManager->merge($object);
+	}
+
+	/**
+	 * @param object $object
+	 * @throws \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException
+	 * @return void
+	 */
+	public function remove($object) {
+		if (!is_object($object) || !($object instanceof $this->entityClassName)) {
+			$type = (is_object($object) ? get_class($object) : gettype($object));
+			throw new \TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException('The value given to remove() was ' . $type . ' , however the ' . get_class($this) . ' can only handle ' . $this->entityClassName . ' instances.', 1298403442);
+		}
+
+		$this->documentManager->remove($object);
+	}
+
+	/**
+	 * @return void
+	 */
+	public function removeAll() {
+		$objects = $this->backend->findAll();
+		foreach ($objects as $object) {
+			$this->remove($object);
+		}
+	}
+
+	/**
+	 * @return array
+	 */
+	public function findAll() {
+		return $this->backend->findAll();
+	}
+
+	/**
+	 * @param string $identifier
+	 * @return object
+	 */
+	public function findByIdentifier($identifier) {
+		return $this->backend->find($identifier);
 	}
 
 	/**
 	 * @return string
 	 */
 	public function getEntityClassName() {
-		return $this->getDocumentClassName();
+		return $this->entityClassName;
 	}
 
 	/**
-	 * @return string
+	 * @return integer
 	 */
-	public function getDocumentClassName() {
-		return $this->objectType;
-	}
-
-	/**
-	 * @param object $object
-	 * @throws \Radmiraal\CouchDB\Exception
-	 */
-	public function add($object) {
-		if (get_class($object) !== $this->getDocumentClassName()) {
-			throw new \Radmiraal\CouchDB\Exception('Wrong document class');
-		}
-		$this->persistenceManager->add($object);
-	}
-
-	public function findByUid($uid) {
-		return $this->persistenceManager->getObjectByIdentifier($uid);
-	}
-
-	public function remove($object) {
-		if (get_class($object) !== $this->getDocumentClassName()) {
-			throw new \Radmiraal\CouchDB\Exception('Wrong document class');
-		}
-		$this->persistenceManager->remove($object);
-	}
-
-	public function update($object) {
-		if (get_class($object) !== $this->getDocumentClassName()) {
-			throw new \Radmiraal\CouchDB\Exception('Wrong document class');
-		}
-		$this->persistenceManager->update($object);
-	}
-
 	public function countAll() {
-
+		return count($this->backend->findAll());
 	}
 
-	public function findAll() {
-
+	public function __call($methodName, $arguments) {
+		if (substr($methodName, 0, 6) === 'findBy') {
+			$propertyName = lcfirst(substr($methodName, 6));
+			return $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
+		} elseif (substr($methodName, 0, 9) === 'findOneBy') {
+			$propertyName = lcfirst(substr($methodName, 9));
+				// Use findBy instead of findOneBy as that method does not use a limit
+			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])), NULL, 1);
+			if (count($result) === 1) {
+				return $result[0];
+			}
+			return NULL;
+		} elseif (substr($methodName, 0, 7) === 'countBy') {
+			$propertyName = lcfirst(substr($methodName, 7));
+			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
+			return count($result);
+		}
 	}
 
-	public function removeAll() {
-
+	/**
+	 * @param mixed $value
+	 * @return mixed object
+	 */
+	protected function getQueryMatchValue($value) {
+		if (is_object($value)
+			&& $this->reflectionService->isClassAnnotatedWith(get_class($value), 'TYPO3\Flow\Annotations\Entity')) {
+				return $this->persistenceManager->getIdentifierByObject($value);
+		}
+		return $value;
 	}
 
-	public function __call($method, $arguments) {
-
-	}
-
-	public function createQuery() {
-
+	/**
+	 * @param string $designDocumentName
+	 * @param string $constraint
+	 * @param string $type
+	 * @return \Doctrine\CouchDB\View\AbstractQuery
+	 */
+	public function createQuery($designDocumentName = 'doctrine_repositories', $constraint = 'equal_constraint', $type = NULL) {
+		switch($type) {
+			case 'lucene':
+				return $this->documentManager->createLuceneQuery($designDocumentName, $constraint);
+			case 'native':
+				return $this->documentManager->createNativeQuery($designDocumentName, $constraint);
+			default:
+				return $this->documentManager->createQuery($designDocumentName, $constraint);
+		}
 	}
 
 	public function setDefaultOrderings(array $defaultOrderings) {
-
 	}
 
-	public function findByIdentifier($identifier) {
-		return $this->persistenceManager->getObjectByIdentifier($identifier);
+	/**
+	 * Convenience method for flushing the document manager
+	 *
+	 * @return void
+	 */
+	public function flushDocumentManager() {
+		$this->documentManager->flush();
 	}
+
 }
 
 ?>

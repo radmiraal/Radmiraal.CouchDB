@@ -1,5 +1,5 @@
 <?php
-namespace Radmiraal\CouchDB;
+namespace Radmiraal\CouchDB\Tests\Unit\Fixtures;
 
 /*                                                                        *
  * This script belongs to the Flow package "Radmiraal.CouchDB".           *
@@ -21,22 +21,7 @@ namespace Radmiraal\CouchDB;
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
 
-use \TYPO3\Flow\Package\Package as BasePackage;
-
-/**
- *
- */
-class Package extends BasePackage {
-
-	/**
-	 * @param \TYPO3\Flow\Core\Bootstrap $bootstrap The current bootstrap
-	 * @return void
-	 */
-	public function boot(\TYPO3\Flow\Core\Bootstrap $bootstrap) {
-		$dispatcher = $bootstrap->getSignalSlotDispatcher();
-		$dispatcher->connect('TYPO3\Flow\Mvc\Dispatcher', 'afterControllerInvocation', 'Radmiraal\CouchDB\CouchDBHelper', 'flush');
-		$dispatcher->connect('TYPO3\Flow\Cli\SlaveRequestHandler', 'dispatchedCommandLineSlaveRequest', 'Radmiraal\CouchDB\CouchDBHelper', 'flush');
-	}
+class Document extends \Radmiraal\CouchDB\Persistence\AbstractDocument {
 
 }
 

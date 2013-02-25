@@ -29,7 +29,7 @@ class DocumentTest extends \TYPO3\Flow\Tests\UnitTestCase {
 	protected $document;
 
 	public function setUp() {
-		$this->document = new \Radmiraal\CouchDB\Document();
+		$this->document = new \Radmiraal\CouchDB\Tests\Unit\Fixtures\Document();
 	}
 
 	/**
@@ -65,49 +65,6 @@ class DocumentTest extends \TYPO3\Flow\Tests\UnitTestCase {
 		$this->assertEquals($value, $this->document->$getter($property));
 	}
 
-	/**
-	 * @test
-	 */
-	public function documentToArrayReturnsAnArrayWithAllProperties() {
-		$this->document->setTitle('test');
-
-		$this->assertEquals(array(
-			'_id' => NULL,
-			'_rev' => NULL,
-			'persistence_objectType' => 'Radmiraal\CouchDB\Document',
-			'title' => 'test'
-		), $this->document->__toArray());
-	}
-
-	/**
-	 * @test
-	 */
-	public function documentToStringReturnsAJsonRepresentationOfTheDocumentWithoutEmptyCouchDBProperties() {
-		$this->document->setTitle('test');
-
-		$this->assertEquals(json_encode((object)array(
-			'persistence_objectType' => 'Radmiraal\CouchDB\Document',
-			'title' => 'test'
-		)), (string)$this->document);
-	}
-
-	/**
-	 * @test
-	 */
-	public function documentToStringReturnsAJsonRepresentationOfTheDocumentWithCouchDBPropertiesSet() {
-		$this->document = new \Radmiraal\CouchDB\Document(array(
-			'title' => 'test',
-			'_id' => 'id',
-			'_rev' => 'rev'
-		));
-
-		$this->assertEquals(json_encode((object)array(
-			'_id' => 'id',
-			'_rev' => 'rev',
-			'persistence_objectType' => 'Radmiraal\CouchDB\Document',
-			'title' => 'test'
-		)), (string)$this->document);
-	}
 }
 
 ?>
