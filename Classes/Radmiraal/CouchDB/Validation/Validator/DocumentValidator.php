@@ -70,6 +70,7 @@ class DocumentValidator extends GenericObjectValidator implements \TYPO3\Flow\Va
 	 * on the "type" and "validation" keys.
 	 *
 	 * @param \Radmiraal\CouchDB\Persistence\AbstractDocument $object
+	 * @throws \InvalidArgumentException
 	 * @return object
 	 */
 	protected function isValid($object) {
@@ -78,6 +79,13 @@ class DocumentValidator extends GenericObjectValidator implements \TYPO3\Flow\Va
 		$propertiesConfiguration = $this->configurationManager->getConfiguration('Models', $propertiesConfigurationPath);
 
 		$validator = new GenericObjectValidator();
+
+			// Skip additional validation if no model configuration is found
+		if (!is_array($propertiesConfiguration)) {
+			$this->result = $validator->validate($object);
+			return;
+		}
+
 		foreach ($propertiesConfiguration as $propertyName => $propertyConfiguration) {
 			if (isset($propertyConfiguration['type'])) {
 				try {
