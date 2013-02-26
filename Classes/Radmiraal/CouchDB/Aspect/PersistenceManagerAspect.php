@@ -95,7 +95,7 @@ class PersistenceManagerAspect {
 		$object = $joinPoint->getAdviceChain()->proceed($joinPoint);
 
 		if ($object === NULL) {
-			$document = $this->documentManager->find($joinPoint->getMethodArgument('className'), $joinPoint->getMethodArgument('uuid'));
+			$document = $this->documentManager->find($joinPoint->getMethodArgument('objectType'), $joinPoint->getMethodArgument('identifier'));
 			if ($document !== NULL) {
 				return $document;
 			}
