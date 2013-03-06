@@ -95,9 +95,13 @@ class PersistenceManagerAspect {
 		$object = $joinPoint->getAdviceChain()->proceed($joinPoint);
 
 		if ($object === NULL) {
-			$document = $this->documentManager->find($joinPoint->getMethodArgument('objectType'), $joinPoint->getMethodArgument('identifier'));
-			if ($document !== NULL) {
-				return $document;
+			try {
+				$document = $this->documentManager->find($joinPoint->getMethodArgument('objectType'), $joinPoint->getMethodArgument('identifier'));
+				if ($document !== NULL) {
+					return $document;
+				}
+			} catch (\Doctrine\ODM\CouchDB\Mapping\MappingException $exception) {
+				// probably not a valid document, so ignore it
 			}
 		}
 
