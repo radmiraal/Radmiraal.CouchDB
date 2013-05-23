@@ -3,7 +3,11 @@
 	"type": "typo3-flow-package",
 	"description": "",
 	"license": ["LGPL-3.0+"],
-	"repository": [
+	"repositories": [
+		{
+			"type": "git",
+			"url": "git://github.com/radmiraal/couchdb-client.git"
+		}
 	],
 	"require": {
 		"typo3/flow": "*",
