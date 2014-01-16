@@ -1,0 +1,7 @@
+Radmiraal\CouchDB\Persistence\DocumentManagerInterface:
+  scope: singleton
+  factoryObjectName: Radmiraal\CouchDB\Persistence\DocumentManagerFactory
+  factoryMethodName: create
+  arguments:
+    1:
+      value: 'default'

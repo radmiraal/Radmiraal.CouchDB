@@ -22,6 +22,7 @@ namespace Radmiraal\CouchDB\Persistence;
  *                                                                        */
 
 use TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Reflection\ObjectAccess;
 
 /**
  * Factory for creating Doctrine ODM DocumentManager instances
@@ -43,6 +44,7 @@ class DocumentManagerFactory {
 
 	/**
 	 * @var array
+	 * @Flow\Inject(setting="persistence.backendOptions", package="Radmiraal.CouchDB")
 	 */
 	protected $settings;
 
@@ -53,37 +55,47 @@ class DocumentManagerFactory {
 	protected $configurationManager;
 
 	/**
-	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 * @var array<\Doctrine\ODM\CouchDB\DocumentManager>
 	 */
-	protected $documentManager;
-
-	/**
-	 * @return void
-	 */
-	public function initializeObject() {
-		$settings = $this->configurationManager->getConfiguration(
-			\TYPO3\Flow\Configuration\ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-			'Radmiraal.CouchDB'
-		);
-		$this->settings = array_merge(array('host' => 'localhost', 'port' => 5984), $settings['persistence']['backendOptions']);
-	}
+	protected $documentManagers;
 
 	/**
 	 * Creates a Doctrine ODM DocumentManager
 	 *
+	 * @param string $instanceIdentifier
 	 * @return \Doctrine\ODM\CouchDB\DocumentManager
 	 */
-	public function create() {
-		if (isset($this->documentManager)) {
-			return $this->documentManager;
+	public function create($instanceIdentifier) {
+		$initializedDocumentManager = ObjectAccess::getPropertyPath($this->documentManagers, $instanceIdentifier);
+		if ($initializedDocumentManager instanceof \Doctrine\ODM\CouchDB\DocumentManager) {
+			return $initializedDocumentManager;
 		}
 
+		// Get backend options, with fallback for default identifier for backwards compatibility
+		$persistenceBackendOptions = ObjectAccess::getPropertyPath($this->settings, 'instances.' . $instanceIdentifier);
+		if ($persistenceBackendOptions === NULL && $instanceIdentifier === 'default') {
+			$persistenceBackendOptions = $this->settings;
+		}
+
+		return $this->createDocumentManager($instanceIdentifier, $persistenceBackendOptions);
+	}
+
+	/**
+	 * @param $instanceIdentifier
+	 * @param array $persistenceBackendOptions
+	 * @throws \Radmiraal\CouchDB\Exception
+	 * @return \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected function createDocumentManager($instanceIdentifier, array $persistenceBackendOptions) {
+		if (empty($persistenceBackendOptions['databaseName'])) {
+			throw new \Radmiraal\CouchDB\Exception('No databaseName set for instance ' . $instanceIdentifier);
+		}
 		$httpClient = new \Doctrine\CouchDB\HTTP\SocketClient(
-			$this->settings['host'],
-			$this->settings['port'],
-			$this->settings['username'],
-			$this->settings['password'],
-			$this->settings['ip']
+			isset($persistenceBackendOptions['host']) ? $persistenceBackendOptions['host'] : 'localhost',
+			isset($persistenceBackendOptions['port']) ? $persistenceBackendOptions['port'] : 5984,
+			isset($persistenceBackendOptions['username']) ? $persistenceBackendOptions['username'] : '',
+			isset($persistenceBackendOptions['password']) ? $persistenceBackendOptions['password'] : '',
+			isset($persistenceBackendOptions['ip']) ? $persistenceBackendOptions['ip'] : NULL
 		);
 
 		$reader = new \Doctrine\Common\Annotations\AnnotationReader();
@@ -92,27 +104,27 @@ class DocumentManagerFactory {
 		$config = new \Doctrine\ODM\CouchDB\Configuration();
 		$config->setMetadataDriverImpl($metaDriver);
 
-		$packages = $this->packageManager->getActivePackages();
-
-		foreach ($packages as $package) {
-			$designDocumentRootPath = \TYPO3\Flow\Utility\Files::concatenatePaths(array($package->getPackagePath(), 'Migrations/CouchDB/DesignDocuments'));
-			if (is_dir($designDocumentRootPath)) {
-				$packageDesignDocumentFolders = glob($designDocumentRootPath . '/*');
-				foreach ($packageDesignDocumentFolders as $packageDesignDocumentFolder) {
-					if (is_dir($packageDesignDocumentFolder)) {
-						$designDocumentName = strtolower(basename($packageDesignDocumentFolder));
-						$config->addDesignDocument(
-							$designDocumentName,
-							'Radmiraal\CouchDB\View\Migration',
-							array(
-								'packageKey' => $package->getPackageKey(),
-								'path' => $packageDesignDocumentFolder
-							)
-						);
-					}
-				}
-			}
-		}
+//		$packages = $this->packageManager->getActivePackages();
+//
+//		foreach ($packages as $package) {
+//			$designDocumentRootPath = \TYPO3\Flow\Utility\Files::concatenatePaths(array($package->getPackagePath(), 'Migrations/CouchDB/DesignDocuments'));
+//			if (is_dir($designDocumentRootPath)) {
+//				$packageDesignDocumentFolders = glob($designDocumentRootPath . '/*');
+//				foreach ($packageDesignDocumentFolders as $packageDesignDocumentFolder) {
+//					if (is_dir($packageDesignDocumentFolder)) {
+//						$designDocumentName = strtolower(basename($packageDesignDocumentFolder));
+//						$config->addDesignDocument(
+//							$designDocumentName,
+//							'Radmiraal\CouchDB\View\Migration',
+//							array(
+//								'packageKey' => $package->getPackageKey(),
+//								'path' => $packageDesignDocumentFolder
+//							)
+//						);
+//					}
+//				}
+//			}
+//		}
 
 		$proxyDirectory = \TYPO3\Flow\Utility\Files::concatenatePaths(array($this->environment->getPathToTemporaryDirectory(), 'DoctrineODM/Proxies'));
 		\TYPO3\Flow\Utility\Files::createDirectoryRecursively($proxyDirectory);
@@ -121,12 +133,36 @@ class DocumentManagerFactory {
 		$config->setProxyNamespace('TYPO3\Flow\Persistence\DoctrineODM\Proxies');
 		$config->setAutoGenerateProxyClasses(TRUE);
 
-		$couchClient = new \Doctrine\CouchDB\CouchDBClient($httpClient, $this->settings['databaseName']);
-		$this->documentManager = \Doctrine\ODM\CouchDB\DocumentManager::create($couchClient, $config);
+		$couchClient = new \Doctrine\CouchDB\CouchDBClient($httpClient, $persistenceBackendOptions['databaseName']);
+		$documentManager = \Doctrine\ODM\CouchDB\DocumentManager::create($couchClient, $config);
 
-		return $this->documentManager;
+		if(!$documentManager->getHttpClient()->request('GET', '/' . $persistenceBackendOptions['databaseName'])->status === 200) {
+			throw new \Radmiraal\CouchDB\Exception('Database ' . $persistenceBackendOptions['databaseName'] . ' for instance ' . $instanceIdentifier . ' does not exist');
+		}
+
+		$this->documentManagers[$instanceIdentifier] = $documentManager;
+		return $documentManager;
+	}
+
+	/**
+	 * @return void
+	 */
+	public function instantiateAllDocumentManagersFromConfiguration() {
+		$instances = isset($this->settings['instances']) ? $this->settings['instances'] : array();
+		if (!isset($instances['default'])) {
+			$instances['default'] = $this->settings;
+		}
+
+		foreach ($instances as $instanceIdentifier => $persistenceBackendOptions) {
+			$this->createDocumentManager($instanceIdentifier, $persistenceBackendOptions);
+		}
+	}
+
+	/**
+	 * @return array<\Doctrine\ODM\CouchDB\DocumentManager>
+	 */
+	public function getInstantiatedDocumentManagers() {
+		return $this->documentManagers;
 	}
 
 }
-
-?>

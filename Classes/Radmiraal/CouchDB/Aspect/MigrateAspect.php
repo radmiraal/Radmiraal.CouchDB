@@ -41,10 +41,9 @@ class MigrateAspect {
 	 */
 	public function callMigrateCommand(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
 			// TODO: Make this less magically quiet and stuff like that ;-)
-		$this->couchDbHelper->createDatabaseIfNotExists();
+		$this->couchDbHelper->createDatabasesIfNotExist();
 		$this->couchDbHelper->createOrUpdateDesignDocuments(array());
 	}
 
 }
 
-?>

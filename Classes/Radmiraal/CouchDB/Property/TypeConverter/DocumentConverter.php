@@ -53,9 +53,10 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObj
 	protected $documentManager;
 
 	/**
+	 * @Flow\Inject
 	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
 	 */
-	protected $documentManagementFactory;
+	protected $documentManagerFactory;
 
 	/**
 	 * @var \TYPO3\Flow\Reflection\ReflectionService
@@ -68,15 +69,6 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObj
 	 */
 	public function injectReflectionService(\TYPO3\Flow\Reflection\ReflectionService $reflectionService) {
 		$this->reflectionService = $reflectionService;
-	}
-
-	/**
-	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
-	 * @return void
-	 */
-	public function injectDocumentManagerFactory(\Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory) {
-		$this->documentManagementFactory = $documentManagerFactory;
-		$this->documentManager = $this->documentManagementFactory->create();
 	}
 
 	/**
@@ -223,7 +215,13 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObj
 	 */
 	protected function fetchObjectFromPersistence($identity, $targetType) {
 		if (is_string($identity)) {
-			$object = $this->documentManager->find($targetType, $identity);
+			$this->documentManagerFactory->instantiateAllDocumentManagersFromConfiguration();
+			foreach ($this->documentManagerFactory->getInstantiatedDocumentManagers() as $documentManager) {
+				$object = $this->documentManager->find($targetType, $identity);
+				if ($object !== NULL) {
+					return $object;
+				}
+			}
 		} else {
 			throw new \TYPO3\Flow\Property\Exception\InvalidSourceException('The identity property "' . $identity . '" is not a string.', 1356681336);
 		}
@@ -236,5 +234,3 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObj
 	}
 
 }
-
-?>

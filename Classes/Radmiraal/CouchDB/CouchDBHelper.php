@@ -29,19 +29,10 @@ use TYPO3\Flow\Annotations as Flow;
 class CouchDBHelper {
 
 	/**
+	 * @Flow\Inject
 	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
 	 */
-	protected $documentManagementFactory;
-
-	/**
-	 * @var \Doctrine\ODM\CouchDB\DocumentManager
-	 */
-	protected $documentManager;
-
-	/**
-	 * @var array
-	 */
-	protected $settings;
+	protected $documentManagerFactory;
 
 	/**
 	 * @var \TYPO3\Flow\Log\SystemLoggerInterface $systemLogger
@@ -57,65 +48,65 @@ class CouchDBHelper {
 	}
 
 	/**
-	 * @param array $settings
+	 * @param string $databaseName
+	 * @param \Doctrine\ODM\CouchDB\DocumentManager $documentManager
 	 * @return void
 	 */
-	public function injectSettings(array $settings) {
-		$this->settings = $settings['persistence']['backendOptions'];
+	public function createDatabaseIfNotExists(\Doctrine\ODM\CouchDB\DocumentManager $documentManager, $databaseName) {
+		if($documentManager->getHttpClient()->request('GET', '/' . $databaseName)->status === 404) {
+			$documentManager->getHttpClient()->request('PUT', '/' . $databaseName);
+		}
 	}
 
 	/**
-	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
+	 * @return array<\Doctrine\ODM\CouchDB\DocumentManager>
+	 */
+	public function getAllDocumentManagers() {
+		$this->documentManagerFactory->instantiateAllDocumentManagersFromConfiguration();
+		return $this->documentManagerFactory->getInstantiatedDocumentManagers();
+	}
+
+	/**
 	 * @return void
 	 */
-	public function injectDocumentManagerFactory(\Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory) {
-		$this->documentManagementFactory = $documentManagerFactory;
-		$this->documentManager = $this->documentManagementFactory->create();
+	public function createDatabasesIfNotExist() {
+		foreach ($this->getAllDocumentManagers() as $documentManager) {
+			$databaseName = $this->getClient($documentManager)->getDatabase();
+			if (!empty($databaseName)) {
+				$this->createDatabaseIfNotExists($documentManager, $databaseName);
+			}
+		}
 	}
 
 	/**
 	 * @param string $databaseName
+	 * @param \Doctrine\ODM\CouchDB\DocumentManager $documentManager
 	 * @return void
 	 */
-	public function createDatabaseIfNotExists($databaseName = NULL) {
-		if ($databaseName === NULL) {
-			$databaseName = $this->settings['databaseName'];
-		}
-		if($this->documentManager->getHttpClient()->request('GET', '/' . $databaseName)->status === 404) {
-			$this->documentManager->getHttpClient()->request('PUT', '/' . $databaseName);
+	public function deleteDatabaseIfExists(\Doctrine\ODM\CouchDB\DocumentManager $documentManager, $databaseName) {
+		if($documentManager->getHttpClient()->request('GET', '/' . $databaseName)->status === 200) {
+			$documentManager->getHttpClient()->request('DELETE', '/' . $databaseName);
 		}
 	}
 
 	/**
-	 * @param string $databaseName
-	 * @return void
-	 */
-	public function deleteDatabaseIfExists($databaseName = NULL) {
-		if ($databaseName === NULL) {
-			$databaseName = $this->settings['databaseName'];
-		}
-		if($this->documentManager->getHttpClient()->request('GET', '/' . $databaseName)->status === 200) {
-			$this->documentManager->getHttpClient()->request('DELETE', '/' . $databaseName);
-		}
-	}
-
-	/**
+	 * @param \Doctrine\ODM\CouchDB\DocumentManager $documentManager
 	 * @return array
 	 */
-	public function createOrUpdateDesignDocuments() {
+	public function createOrUpdateDesignDocuments(\Doctrine\ODM\CouchDB\DocumentManager $documentManager) {
 		$result = array('success' => array(), 'error' => array());
 
-		$designDocumentNames = $this->documentManager->getConfiguration()->getDesignDocumentNames();
+		$designDocumentNames = $documentManager->getConfiguration()->getDesignDocumentNames();
 
 		foreach ($designDocumentNames as $docName) {
-			$designDocData = $this->documentManager->getConfiguration()->getDesignDocument($docName);
+			$designDocData = $documentManager->getConfiguration()->getDesignDocument($docName);
 
 			$localDesignDoc = new $designDocData['className']($designDocData['options']);
 			$localDocBody = $localDesignDoc->getData();
 
-			$remoteDocBody = $this->documentManager->getCouchDBClient()->findDocument('_design/' . $docName)->body;
+			$remoteDocBody = $documentManager->getCouchDBClient()->findDocument('_design/' . $docName)->body;
 			if ($this->isMissingOrDifferent($localDocBody, $remoteDocBody)) {
-				$response = $this->documentManager->getCouchDBClient()->createDesignDocument($docName, $localDesignDoc);
+				$response = $documentManager->getCouchDBClient()->createDesignDocument($docName, $localDesignDoc);
 
 				if ($response->status < 300) {
 					$result['success'][] = $docName;
@@ -129,10 +120,11 @@ class CouchDBHelper {
 	}
 
 	/**
+	 * @param \Doctrine\ODM\CouchDB\DocumentManager $documentManager
 	 * @return \Doctrine\CouchDB\CouchDBClient
 	 */
-	public function getClient() {
-		return $this->documentManager->getCouchDBClient();
+	public function getClient(\Doctrine\ODM\CouchDB\DocumentManager $documentManager) {
+		return $documentManager->getCouchDBClient();
 	}
 
 	/**
@@ -162,12 +154,12 @@ class CouchDBHelper {
 	 */
 	public function flush() {
 		try {
-			$this->documentManager->flush();
+			foreach ($this->documentManagerFactory->getInstantiatedDocumentManagers() as $documentManager) {
+				$documentManager->flush();
+			}
 		} catch (\Exception $exception) {
 			$this->systemLogger->log('Could not flush ODM unit of work, error: ' . $exception->getMessage());
 		}
 	}
 
 }
-
-?>

@@ -48,5 +48,3 @@ class Migration implements \Doctrine\CouchDB\View\DesignDocument {
 	}
 
 }
-
-?>

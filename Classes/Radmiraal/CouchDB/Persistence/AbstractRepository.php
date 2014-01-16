@@ -41,12 +41,8 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	protected $persistenceManager;
 
 	/**
-	 * @var \Doctrine\ODM\CouchDB\DocumentRepository
-	 */
-	protected $backend;
-
-	/**
-	 * @var \Doctrine\ODM\CouchDB\DocumentManager
+	 * @Flow\Inject
+	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerInterface
 	 */
 	protected $documentManager;
 
@@ -59,24 +55,9 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	protected $entityClassName;
 
 	/**
-	 * @var \Radmiraal\CouchDB\Persistence\DocumentManagerFactory
-	 */
-	protected $documentManagementFactory;
-
-	/**
 	 * @var array
 	 */
 	protected $defaultOrderings = array();
-
-	/**
-	 * @param \Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory
-	 * @return void
-	 */
-	public function injectDocumentManagerFactory(\Radmiraal\CouchDB\Persistence\DocumentManagerFactory $documentManagerFactory) {
-		$this->documentManagementFactory = $documentManagerFactory;
-		$this->documentManager = $this->documentManagementFactory->create();
-		$this->backend = $this->documentManager->getRepository($this->getEntityClassName());
-	}
 
 	/**
 	 * Initializes a new Repository.
@@ -135,7 +116,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 * @return void
 	 */
 	public function removeAll() {
-		$objects = $this->backend->findAll();
+		$objects = $this->getBackend()->findAll();
 		foreach ($objects as $object) {
 			$this->remove($object);
 		}
@@ -145,7 +126,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 * @return array
 	 */
 	public function findAll() {
-		return $this->backend->findAll();
+		return $this->getBackend()->findAll();
 	}
 
 	/**
@@ -153,7 +134,7 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 * @return object
 	 */
 	public function findByIdentifier($identifier) {
-		return $this->backend->find($identifier);
+		return $this->getBackend()->find($identifier);
 	}
 
 	/**
@@ -167,24 +148,24 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 * @return integer
 	 */
 	public function countAll() {
-		return count($this->backend->findAll());
+		return count($this->getBackend()->findAll());
 	}
 
 	public function __call($methodName, $arguments) {
 		if (substr($methodName, 0, 6) === 'findBy') {
 			$propertyName = lcfirst(substr($methodName, 6));
-			return $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
+			return $this->getBackend()->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
 		} elseif (substr($methodName, 0, 9) === 'findOneBy') {
 			$propertyName = lcfirst(substr($methodName, 9));
 				// Use findBy instead of findOneBy as that method does not use a limit
-			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])), NULL, 1);
+			$result = $this->getBackend()->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])), NULL, 1);
 			if (count($result) === 1) {
 				return $result[0];
 			}
 			return NULL;
 		} elseif (substr($methodName, 0, 7) === 'countBy') {
 			$propertyName = lcfirst(substr($methodName, 7));
-			$result = $this->backend->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
+			$result = $this->getBackend()->findBy(array($propertyName => $this->getQueryMatchValue($arguments[0])));
 			return count($result);
 		}
 	}
@@ -230,6 +211,11 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 		$this->documentManager->flush();
 	}
 
-}
+	/**
+	 * @return \Doctrine\ODM\CouchDB\DocumentRepository
+	 */
+	protected function getBackend() {
+		return $this->documentManager->getRepository($this->getEntityClassName());
+	}
 
-?>
+}

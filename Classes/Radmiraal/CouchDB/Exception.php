@@ -29,5 +29,3 @@ use \TYPO3\Flow\Package\Package as BasePackage;
 class Exception extends \TYPO3\Flow\Exception {
 
 }
-
-?>
