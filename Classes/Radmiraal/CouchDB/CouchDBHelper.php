@@ -93,25 +93,33 @@ class CouchDBHelper {
 	 * @param \Doctrine\ODM\CouchDB\DocumentManager $documentManager
 	 * @return array
 	 */
-	public function createOrUpdateDesignDocuments(\Doctrine\ODM\CouchDB\DocumentManager $documentManager) {
+	public function createOrUpdateDesignDocuments(\Doctrine\ODM\CouchDB\DocumentManager $documentManager = NULL) {
+		if ($documentManager === NULL) {
+			$documentManagers = $this->getAllDocumentManagers();
+		} else {
+			$documentManagers = array($documentManager);
+		}
+
 		$result = array('success' => array(), 'error' => array());
 
-		$designDocumentNames = $documentManager->getConfiguration()->getDesignDocumentNames();
+		foreach ($documentManagers as $documentManager) {
+			$designDocumentNames = $documentManager->getConfiguration()->getDesignDocumentNames();
 
-		foreach ($designDocumentNames as $docName) {
-			$designDocData = $documentManager->getConfiguration()->getDesignDocument($docName);
+			foreach ($designDocumentNames as $docName) {
+				$designDocData = $documentManager->getConfiguration()->getDesignDocument($docName);
 
-			$localDesignDoc = new $designDocData['className']($designDocData['options']);
-			$localDocBody = $localDesignDoc->getData();
+				$localDesignDoc = new $designDocData['className']($designDocData['options']);
+				$localDocBody = $localDesignDoc->getData();
 
-			$remoteDocBody = $documentManager->getCouchDBClient()->findDocument('_design/' . $docName)->body;
-			if ($this->isMissingOrDifferent($localDocBody, $remoteDocBody)) {
-				$response = $documentManager->getCouchDBClient()->createDesignDocument($docName, $localDesignDoc);
+				$remoteDocBody = $documentManager->getCouchDBClient()->findDocument('_design/' . $docName)->body;
+				if ($this->isMissingOrDifferent($localDocBody, $remoteDocBody)) {
+					$response = $documentManager->getCouchDBClient()->createDesignDocument($docName, $localDesignDoc);
 
-				if ($response->status < 300) {
-					$result['success'][] = $docName;
-				} else {
-					$result['error'][$docName] = $response->body['reason'];
+					if ($response->status < 300) {
+						$result['success'][] = $docName;
+					} else {
+						$result['error'][$docName] = $response->body['reason'];
+					}
 				}
 			}
 		}
