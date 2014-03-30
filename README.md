@@ -1,6 +1,5 @@
 Radmiraal.CouchDB
 =================
 
-This package is an extension on the TYPO3.CouchDB package.
-It's not meant as a replacement, nor will it be supported
-in the future.
+This package is an implementation of the Doctrine CouchDB ODM and can be used next to the default Doctrine ORM
+in TYPO3 Flow.
