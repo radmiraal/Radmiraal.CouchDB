@@ -20,6 +20,8 @@ namespace Radmiraal\CouchDB\Tests\Functional;
  *                                                                        *
  * The TYPO3 project - inspiring people to share!                         *
  *                                                                        */
+use TYPO3\Flow\Configuration\ConfigurationManager;
+use TYPO3\Flow\Reflection\ObjectAccess;
 
 /**
  * Abstract functional test class, setting up a DocumentManager and httpClient
@@ -33,36 +35,37 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	protected $documentManagerFactory;
 
 	/**
-	 * @var \Doctrine\ODM\CouchDB\DocumentManager
-	 */
-	protected $documentManager;
-
-	/**
-	 * @var string
-	 */
-	protected $databaseName = 'doctrine_sandbox';
-
-	/**
 	 * @var array
 	 */
-	protected $settings;
+	protected $instances;
 
 	/**
 	 * Set up test
 	 */
 	public function setUp() {
 		parent::setUp();
-
+		/** @var \TYPO3\Flow\Configuration\ConfigurationManager $configurationManager */
 		$configurationManager = $this->objectManager->get('TYPO3\Flow\Configuration\ConfigurationManager');
-		$this->settings = $this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB', 'persistence', 'backendOptions'));
+		$settings = $configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'Radmiraal.CouchDB.persistence.backendOptions');
 
 		$this->documentManagerFactory = $this->objectManager->get('\Radmiraal\CouchDB\Persistence\DocumentManagerFactory');
-		$this->documentManager = $this->documentManagerFactory->create();
+
+		$this->instances = ObjectAccess::getPropertyPath($settings, 'instances');
+		if ($this->instances === NULL) {
+			$this->instances = array('default' => $settings);
+		}
 
 		$couchDbHelper = new \Radmiraal\CouchDB\CouchDBHelper();
-		$couchDbHelper->injectSettings($this->objectManager->getSettingsByPath(array('Radmiraal', 'CouchDB')));
-		$couchDbHelper->injectDocumentManagerFactory($this->documentManagerFactory);
-		$couchDbHelper->createDatabaseIfNotExists();
+		$this->inject($couchDbHelper, 'documentManagerFactory', $this->documentManagerFactory);
+
+		foreach ($this->instances as $instanceIdentifier => $instanceConfiguration) {
+			if (!isset($instanceConfiguration['databaseName'])) {
+				continue;
+			}
+			$documentManager = $this->documentManagerFactory->create($instanceIdentifier);
+			$couchDbHelper->createDatabaseIfNotExists($documentManager, $instanceConfiguration['databaseName']);
+		}
+
 		$couchDbHelper->createOrUpdateDesignDocuments();
 	}
 
@@ -71,9 +74,20 @@ abstract class AbstractFunctionalTest extends \TYPO3\Flow\Tests\FunctionalTestCa
 	 */
 	public function tearDown() {
 		parent::tearDown();
-		if (isset($this->documentManager)) {
-			$this->documentManager->getHttpClient()->request('DELETE', '/' . $this->settings['databaseName']);
+
+		$documentManagers = $this->documentManagerFactory->getInstantiatedDocumentManagers();
+		/** @var \Doctrine\ODM\CouchDB\DocumentManager $documentManager */
+		foreach ($documentManagers as $documentManager) {
+			$documentManager->getHttpClient()->request('DELETE', '/' . $documentManager->getCouchDBClient()->getDatabase());
 		}
+	}
+
+	/**
+	 * @return \Doctrine\ODM\CouchDB\DocumentManager
+	 */
+	protected function getDefaultDocumentManager() {
+		$documentManagers = $this->documentManagerFactory->getInstantiatedDocumentManagers();
+		return $documentManagers['default'];
 	}
 
 }

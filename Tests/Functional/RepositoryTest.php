@@ -36,7 +36,7 @@ class RepositoryTest extends AbstractFunctionalTest {
 	public function setUp() {
 		parent::setUp();
 		$this->articleRepository = $this->objectManager->get('\Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Repository\ArticleRepository');
-		$this->articleRepository->injectDocumentManagerFactory($this->documentManagerFactory);
+		$this->inject($this->articleRepository, 'documentManager', $this->getDefaultDocumentManager());
 	}
 
 	/**
@@ -55,7 +55,7 @@ class RepositoryTest extends AbstractFunctionalTest {
 	public function aModelCanBeAdded() {
 		$model = new Article(array('title' => 'foo'));
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$this->assertEquals(1, $this->articleRepository->countAll());
 	}
 
@@ -65,10 +65,10 @@ class RepositoryTest extends AbstractFunctionalTest {
 	public function aModelCanBeRemoved() {
 		$model = new Article(array('title' => 'foo'));
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$this->assertEquals(1, $this->articleRepository->countAll());
 		$this->articleRepository->remove($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$this->assertEquals(0, $this->articleRepository->countAll());
 	}
 
@@ -78,10 +78,10 @@ class RepositoryTest extends AbstractFunctionalTest {
 	public function removeAllRemovesAllDocuments() {
 		$model = new Article(array('title' => 'foo'));
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$this->assertEquals(1, $this->articleRepository->countAll());
 		$this->articleRepository->removeAll();
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$this->assertEquals(0, $this->articleRepository->countAll());
 	}
 
@@ -92,7 +92,7 @@ class RepositoryTest extends AbstractFunctionalTest {
 		$model = new Article();
 		$model->setTitle('foo');
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$result = $this->articleRepository->findAll();
 		$this->assertNotNull($result[0]->getId());
 		$result2 = $this->articleRepository->findByIdentifier($result[0]->getId());
@@ -106,7 +106,7 @@ class RepositoryTest extends AbstractFunctionalTest {
 		$model = new Article();
 		$model->setTitle('foo');
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 		$result = $this->articleRepository->findByTitle('foo');
 		$this->assertNotNull($result[0]->getId());
 	}
@@ -118,7 +118,7 @@ class RepositoryTest extends AbstractFunctionalTest {
 		$model = new Article();
 		$model->setTitle('foo');
 		$this->articleRepository->add($model);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->flush();
 
 		$result = $this->articleRepository->findOneByTitle('foo');
 		$this->assertNotNull($result->getId());

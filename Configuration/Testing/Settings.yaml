@@ -2,4 +2,6 @@ Radmiraal:
   CouchDB:
     persistence:
       backendOptions:
-        databaseName: 'radmiraal-couchdb-test'
+        instances:
+          default:
+            databaseName: 'radmiraal-couchdb-test'

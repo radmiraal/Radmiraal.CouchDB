@@ -30,14 +30,14 @@ class DocumentManagerTest extends AbstractFunctionalTest {
 	 * @test
 	 */
 	public function checkIfHttpClientIsInstantiated() {
-		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->documentManager->getHttpClient());
+		$this->assertInstanceOf('Doctrine\CouchDB\HTTP\SocketClient', $this->getDefaultDocumentManager()->getHttpClient());
 	}
 
 	/**
 	 * @test
 	 */
 	public function checkIfDatabaseIsCreated() {
-		$res = $this->documentManager->getHttpClient()->request('GET', '/' . $this->settings['databaseName']);
+		$res = $this->getDefaultDocumentManager()->getHttpClient()->request('GET', '/' . $this->getDefaultDocumentManager()->getCouchDBClient()->getDatabase());
 		$this->assertEquals(200, $res->status);
 	}
 
@@ -45,7 +45,7 @@ class DocumentManagerTest extends AbstractFunctionalTest {
 	 * @test
 	 */
 	public function doctrineOdmAnnotationsCanBeLoaded() {
-		$annotation = new \Doctrine\ODM\CouchDB\Mapping\Annotations\Document();
+		$annotation = new \Doctrine\ODM\CouchDB\Mapping\Annotations\Document(array());
 		$this->assertInstanceOf('Doctrine\ODM\CouchDB\Mapping\Annotations\Document', $annotation);
 	}
 

@@ -33,10 +33,10 @@ class PersistenceTest extends AbstractFunctionalTest {
 	 */
 	public function anObjectCanBePersisted() {
 		$document1 = new Article();
-		$this->documentManager->persist($document1);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->persist($document1);
+		$this->getDefaultDocumentManager()->flush();
 
-		$this->assertTrue($this->documentManager->contains($document1));
+		$this->assertTrue($this->getDefaultDocumentManager()->contains($document1));
 	}
 
 	/**
@@ -59,14 +59,14 @@ class PersistenceTest extends AbstractFunctionalTest {
 		$article3->setBody('Find out!');
 		$article3->addTag('Computer Science');
 
-		$this->documentManager->persist($article1);
-		$this->documentManager->persist($article2);
-		$this->documentManager->persist($article3);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->persist($article1);
+		$this->getDefaultDocumentManager()->persist($article2);
+		$this->getDefaultDocumentManager()->persist($article3);
+		$this->getDefaultDocumentManager()->flush();
 
-		$this->assertTrue($this->documentManager->contains($article1));
-		$this->assertTrue($this->documentManager->contains($article2));
-		$this->assertTrue($this->documentManager->contains($article3));
+		$this->assertTrue($this->getDefaultDocumentManager()->contains($article1));
+		$this->assertTrue($this->getDefaultDocumentManager()->contains($article2));
+		$this->assertTrue($this->getDefaultDocumentManager()->contains($article3));
 	}
 
 	/**
@@ -78,10 +78,10 @@ class PersistenceTest extends AbstractFunctionalTest {
 		$article->setBody('Find out!');
 		$article->addTag('Philosophy');
 
-		$this->documentManager->persist($article);
-		$this->documentManager->flush();
+		$this->getDefaultDocumentManager()->persist($article);
+		$this->getDefaultDocumentManager()->flush();
 
-		$articles = $this->documentManager->getRepository('\Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\Article')->findAll();
+		$articles = $this->getDefaultDocumentManager()->getRepository('\Radmiraal\CouchDB\Tests\Functional\Fixtures\Domain\Model\Article')->findAll();
 
 		$this->assertEquals(1, count($articles));
 		$this->assertInstanceOf('DateTime', $articles[0]->getCreated());
