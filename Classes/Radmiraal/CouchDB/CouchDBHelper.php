@@ -162,8 +162,11 @@ class CouchDBHelper {
 	 */
 	public function flush() {
 		try {
-			foreach ($this->documentManagerFactory->getInstantiatedDocumentManagers() as $documentManager) {
-				$documentManager->flush();
+			$documentManagers = $this->documentManagerFactory->getInstantiatedDocumentManagers();
+			if (is_array($documentManagers)) {
+				foreach ($this->documentManagerFactory->getInstantiatedDocumentManagers() as $documentManager) {
+					$documentManager->flush();
+				}
 			}
 		} catch (\Exception $exception) {
 			$this->systemLogger->log('Could not flush ODM unit of work, error: ' . $exception->getMessage());
