@@ -23,12 +23,21 @@ namespace Radmiraal\CouchDB\Persistence;
 
 use TYPO3\Flow\Annotations as Flow;
 use TYPO3\Flow\Reflection\ObjectAccess;
+use TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException;
+use Doctrine\Common\EventManager;
+use Doctrine\ODM\CouchDB\DocumentManager;
 
 /**
  * Factory for creating Doctrine ODM DocumentManager instances
  * @Flow\Scope("singleton")
  */
 class DocumentManagerFactory {
+
+	/**
+	 * @Flow\Inject
+	 * @var \TYPO3\Flow\Object\ObjectManagerInterface
+	 */
+	protected $objectManager;
 
 	/**
 	 * @var \TYPO3\Flow\Package\PackageManagerInterface
@@ -46,7 +55,13 @@ class DocumentManagerFactory {
 	 * @var array
 	 * @Flow\Inject(setting="persistence.backendOptions", package="Radmiraal.CouchDB")
 	 */
-	protected $settings;
+	protected $backendOptions;
+
+	/**
+	 * @var array
+	 * @Flow\Inject(setting="persistence.doctrine.eventListeners", package="TYPO3.Flow")
+	 */
+	protected $eventListeners = array();
 
 	/**
 	 * @var \TYPO3\Flow\Configuration\ConfigurationManager
@@ -72,9 +87,9 @@ class DocumentManagerFactory {
 		}
 
 		// Get backend options, with fallback for default identifier for backwards compatibility
-		$persistenceBackendOptions = ObjectAccess::getPropertyPath($this->settings, 'instances.' . $instanceIdentifier);
+		$persistenceBackendOptions = ObjectAccess::getPropertyPath($this->backendOptions, 'instances.' . $instanceIdentifier);
 		if ($persistenceBackendOptions === NULL && $instanceIdentifier === 'default') {
-			$persistenceBackendOptions = $this->settings;
+			$persistenceBackendOptions = $this->backendOptions;
 		}
 
 		return $this->createDocumentManager($instanceIdentifier, $persistenceBackendOptions);
@@ -134,7 +149,8 @@ class DocumentManagerFactory {
 		$config->setAutoGenerateProxyClasses(TRUE);
 
 		$couchClient = new \Doctrine\CouchDB\CouchDBClient($httpClient, $persistenceBackendOptions['databaseName']);
-		$documentManager = \Doctrine\ODM\CouchDB\DocumentManager::create($couchClient, $config);
+		/** @var DocumentManager $documentManager */
+		$documentManager = DocumentManager::create($couchClient, $config, $this->buildEventManager());
 
 		if(!$documentManager->getHttpClient()->request('GET', '/' . $persistenceBackendOptions['databaseName'])->status === 200) {
 			throw new \Radmiraal\CouchDB\Exception('Database ' . $persistenceBackendOptions['databaseName'] . ' for instance ' . $instanceIdentifier . ' does not exist');
@@ -148,9 +164,9 @@ class DocumentManagerFactory {
 	 * @return void
 	 */
 	public function instantiateAllDocumentManagersFromConfiguration() {
-		$instances = isset($this->settings['instances']) ? $this->settings['instances'] : array();
+		$instances = isset($this->backendOptions['instances']) ? $this->backendOptions['instances'] : array();
 		if (!isset($instances['default'])) {
-			$instances['default'] = $this->settings;
+			$instances['default'] = $this->backendOptions;
 		}
 
 		foreach ($instances as $instanceIdentifier => $persistenceBackendOptions) {
@@ -165,4 +181,18 @@ class DocumentManagerFactory {
 		return $this->documentManagers;
 	}
 
+	/**
+	 * Add configured event subscribers and listeners to the event manager
+	 *
+	 * @return EventManager
+	 * @throws IllegalObjectTypeException
+	 */
+	protected function buildEventManager() {
+		$eventManager = new EventManager();
+		foreach ($this->eventListeners as $listenerOptions) {
+			$listener = $this->objectManager->get($listenerOptions['listener']);
+			$eventManager->addEventListener($listenerOptions['events'], $listener);
+		}
+		return $eventManager;
+	}
 }
