@@ -59,7 +59,7 @@ class DocumentManagerFactory {
 
 	/**
 	 * @var array
-	 * @Flow\Inject(setting="persistence.doctrine.eventListeners", package="TYPO3.Flow")
+	 * @Flow\Inject(setting="persistence.doctrine.eventListeners", package="Radmiraal.CouchDB")
 	 */
 	protected $eventListeners = array();
 
@@ -189,9 +189,11 @@ class DocumentManagerFactory {
 	 */
 	protected function buildEventManager() {
 		$eventManager = new EventManager();
-		foreach ($this->eventListeners as $listenerOptions) {
-			$listener = $this->objectManager->get($listenerOptions['listener']);
-			$eventManager->addEventListener($listenerOptions['events'], $listener);
+		if (is_array($this->eventListeners)) {
+			foreach ($this->eventListeners as $listenerOptions) {
+				$listener = $this->objectManager->get($listenerOptions['listener']);
+				$eventManager->addEventListener($listenerOptions['events'], $listener);
+			}
 		}
 		return $eventManager;
 	}
