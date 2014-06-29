@@ -32,7 +32,7 @@ class PersistenceManagerAspect {
 	 * @Flow\Around("within(TYPO3\Flow\Persistence\PersistenceManagerInterface) && method(.*->convertObjectToIdentityArray())")
 	 * @param \TYPO3\Flow\Aop\JoinPointInterface $joinPoint The current join point
 	 * @throws \TYPO3\Flow\Persistence\Exception\UnknownObjectException
-	 * @return void
+	 * @return array
 	 */
 	public function convertDocumentToIdentityArray(\TYPO3\Flow\Aop\JoinPointInterface $joinPoint) {
 		try {

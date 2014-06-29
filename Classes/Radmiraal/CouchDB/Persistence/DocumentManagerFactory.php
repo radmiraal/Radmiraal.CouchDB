@@ -22,10 +22,12 @@ namespace Radmiraal\CouchDB\Persistence;
  *                                                                        */
 
 use TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Package\Package;
 use TYPO3\Flow\Reflection\ObjectAccess;
 use TYPO3\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Doctrine\Common\EventManager;
 use Doctrine\ODM\CouchDB\DocumentManager;
+use TYPO3\Flow\Utility\Files;
 
 /**
  * Factory for creating Doctrine ODM DocumentManager instances
@@ -102,6 +104,10 @@ class DocumentManagerFactory {
 	 * @return \Doctrine\ODM\CouchDB\DocumentManager
 	 */
 	protected function createDocumentManager($instanceIdentifier, array $persistenceBackendOptions) {
+		if (isset($this->documentManagers[$instanceIdentifier])) {
+			return $this->documentManagers[$instanceIdentifier];
+		}
+
 		if (empty($persistenceBackendOptions['databaseName'])) {
 			throw new \Radmiraal\CouchDB\Exception('No databaseName set for instance ' . $instanceIdentifier);
 		}
@@ -119,27 +125,18 @@ class DocumentManagerFactory {
 		$config = new \Doctrine\ODM\CouchDB\Configuration();
 		$config->setMetadataDriverImpl($metaDriver);
 
-//		$packages = $this->packageManager->getActivePackages();
-//
-//		foreach ($packages as $package) {
-//			$designDocumentRootPath = \TYPO3\Flow\Utility\Files::concatenatePaths(array($package->getPackagePath(), 'Migrations/CouchDB/DesignDocuments'));
-//			if (is_dir($designDocumentRootPath)) {
-//				$packageDesignDocumentFolders = glob($designDocumentRootPath . '/*');
-//				foreach ($packageDesignDocumentFolders as $packageDesignDocumentFolder) {
-//					if (is_dir($packageDesignDocumentFolder)) {
-//						$designDocumentName = strtolower(basename($packageDesignDocumentFolder));
-//						$config->addDesignDocument(
-//							$designDocumentName,
-//							'Radmiraal\CouchDB\View\Migration',
-//							array(
-//								'packageKey' => $package->getPackageKey(),
-//								'path' => $packageDesignDocumentFolder
-//							)
-//						);
-//					}
-//				}
-//			}
-//		}
+		$designDocumentFolders = array(
+			'_all' => array(),
+			$instanceIdentifier => array()
+		);
+
+		/**
+		 * TODO: Move creation of the design documents to the migrate command and add a cache for design documents to load
+		 */
+		$packages = $this->packageManager->getActivePackages();
+		foreach ($packages as $package) {
+			$this->importDesignDocuments($config, $package, $instanceIdentifier);
+		}
 
 		$proxyDirectory = \TYPO3\Flow\Utility\Files::concatenatePaths(array($this->environment->getPathToTemporaryDirectory(), 'DoctrineODM/Proxies'));
 		\TYPO3\Flow\Utility\Files::createDirectoryRecursively($proxyDirectory);
@@ -161,11 +158,40 @@ class DocumentManagerFactory {
 	}
 
 	/**
+	 * @param \Doctrine\ODM\CouchDB\Configuration $config
+	 * @param Package $package
+	 * @param string $instanceIdentifier
+	 * @return void
+	 */
+	protected function importDesignDocuments(\Doctrine\ODM\CouchDB\Configuration &$config, Package $package, $instanceIdentifier) {
+		$designDocumentRootFolder = Files::concatenatePaths(array($package->getPackagePath(), 'Migrations/CouchDB/DesignDocuments'));
+		if (!is_dir($designDocumentRootFolder)) {
+			return;
+		}
+
+		$designDocumentFolders = glob(Files::concatenatePaths(array($designDocumentRootFolder, '_all')) . '/*');
+		$designDocumentFolders = array_merge($designDocumentFolders, glob(Files::concatenatePaths(array($designDocumentRootFolder, $instanceIdentifier)) . '/*'));
+
+		foreach ($designDocumentFolders as $designDocumentFolder) {
+			if (is_dir($designDocumentFolder)) {
+				$config->addDesignDocument(
+					strtolower(basename($designDocumentFolder)),
+					'Radmiraal\CouchDB\View\Migration',
+					array(
+						'packageKey' => $package->getPackageKey(),
+						'path' => $designDocumentFolder
+					)
+				);
+			}
+		}
+	}
+
+	/**
 	 * @return void
 	 */
 	public function instantiateAllDocumentManagersFromConfiguration() {
 		$instances = isset($this->backendOptions['instances']) ? $this->backendOptions['instances'] : array();
-		if (!isset($instances['default'])) {
+		if (!isset($instances['default']) && empty($instances)) {
 			$instances['default'] = $this->backendOptions;
 		}
 
