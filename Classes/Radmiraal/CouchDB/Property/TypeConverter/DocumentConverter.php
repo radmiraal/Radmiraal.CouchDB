@@ -217,7 +217,7 @@ class DocumentConverter extends \TYPO3\Flow\Property\TypeConverter\PersistentObj
 		if (is_string($identity)) {
 			$this->documentManagerFactory->instantiateAllDocumentManagersFromConfiguration();
 			foreach ($this->documentManagerFactory->getInstantiatedDocumentManagers() as $documentManager) {
-				$object = $this->documentManager->find($targetType, $identity);
+				$object = $documentManager->find($targetType, $identity);
 				if ($object !== NULL) {
 					return $object;
 				}
