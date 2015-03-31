@@ -176,7 +176,8 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 */
 	protected function getQueryMatchValue($value) {
 		if (is_object($value)
-			&& $this->reflectionService->isClassAnnotatedWith(get_class($value), 'TYPO3\Flow\Annotations\Entity')) {
+			&& ($this->reflectionService->isClassAnnotatedWith(get_class($value), 'TYPO3\Flow\Annotations\Entity')
+				|| $this->reflectionService->isClassAnnotatedWith(get_class($value), 'Doctrine\ODM\CouchDB\Mapping\Annotations\Document'))) {
 				return $this->persistenceManager->getIdentifierByObject($value);
 		}
 		return $value;
