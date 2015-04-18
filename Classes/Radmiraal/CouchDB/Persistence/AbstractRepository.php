@@ -63,10 +63,10 @@ abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryI
 	 * Initializes a new Repository.
 	 */
 	public function __construct() {
-		if (defined('static::ENTITY_CLASSNAME') === FALSE) {
+		if (self::ENTITY_CLASSNAME === NULL) {
 			$this->entityClassName = preg_replace(array('/\\\Repository\\\/', '/Repository$/'), array('\\Model\\', ''), get_class($this));
 		} else {
-			$this->entityClassName = static::ENTITY_CLASSNAME;
+			$this->entityClassName = self::ENTITY_CLASSNAME;
 		}
 	}
 
