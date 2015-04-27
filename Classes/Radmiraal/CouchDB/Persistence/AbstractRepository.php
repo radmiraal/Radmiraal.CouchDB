@@ -28,6 +28,8 @@ use TYPO3\Flow\Annotations as Flow;
  */
 abstract class AbstractRepository implements \TYPO3\Flow\Persistence\RepositoryInterface {
 
+	const ENTITY_CLASSNAME = NULL;
+
 	/**
 	 * @var \TYPO3\Flow\Reflection\ReflectionService
 	 * @Flow\Inject
