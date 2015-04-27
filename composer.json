@@ -3,11 +3,9 @@
 	"type": "typo3-flow-package",
 	"description": "",
 	"license": ["LGPL-3.0+"],
-	"repository": [
-	],
 	"require": {
 		"typo3/flow": "*",
-		"doctrine/couchdb-odm": "dev-master"
+		"doctrine/couchdb-odm": "dev-master#ce00bf3e56826fd735dffb0754c62e440159265d"
 	},
 	"autoload": {
 		"psr-0": {
